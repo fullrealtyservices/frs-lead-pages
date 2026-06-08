@@ -65,7 +65,7 @@ class LoanOfficers {
             $headers['Authorization'] = 'Bearer ' . $api_key;
         }
 
-        $response = wp_remote_get( trailingslashit( $api_url ) . 'wp-json/frsos/v1/loan-officers', [
+        $response = wp_remote_get( trailingslashit( $api_url ) . 'wp-json/frs/v1/loan-officers', [
             'headers' => $headers,
             'timeout' => 10,
         ] );
