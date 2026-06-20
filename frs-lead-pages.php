@@ -105,6 +105,7 @@ function init() {
     // Load core classes
     Core\PostTypes::init();
     Core\PublicDomain::init();
+    Core\DomainMapping::init();
     Core\Shortcodes::init();
     Core\Analytics::init();
 
@@ -354,6 +355,9 @@ function activate() {
     // Flush rewrite rules for custom post types
     Core\PostTypes::register();
     flush_rewrite_rules();
+
+    // (Re)build the public-domain mapping artifacts if the feature is enabled.
+    Core\DomainMapping::sync();
 }
 register_activation_hook( __FILE__, __NAMESPACE__ . '\\activate' );
 
@@ -364,6 +368,11 @@ function deactivate() {
     // Note: We don't unregister capabilities on deactivation
     // to preserve user access if plugin is temporarily disabled.
     // Capabilities are only removed on uninstall.
+
+    // Remove the sunrise mapping + map file so a disabled plugin never leaves a
+    // dangling domain map behind.
+    Core\DomainMapping::teardown();
+
     flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, __NAMESPACE__ . '\\deactivate' );

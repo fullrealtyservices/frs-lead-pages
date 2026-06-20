@@ -37,6 +37,36 @@ class Settings {
             return;
         }
         wp_enqueue_media();
+        // WordPress Design System component styles (cards, toggles, etc.).
+        wp_enqueue_style( 'wp-components' );
+    }
+
+    /**
+     * Sanitize a checkbox value to a real boolean.
+     *
+     * @param mixed $value Raw value.
+     * @return bool
+     */
+    public static function sanitize_checkbox( $value ): bool {
+        return ! empty( $value ) && '0' !== $value;
+    }
+
+    /**
+     * Sanitize a domain down to a bare host (no scheme, path, or trailing slash).
+     *
+     * @param mixed $value Raw value.
+     * @return string
+     */
+    public static function sanitize_domain( $value ): string {
+        $value = trim( (string) $value );
+        if ( $value === '' ) {
+            return '';
+        }
+        if ( ! preg_match( '#^https?://#i', $value ) ) {
+            $value = 'https://' . $value;
+        }
+        $host = wp_parse_url( $value, PHP_URL_HOST );
+        return $host ? strtolower( $host ) : '';
     }
 
     /**
@@ -121,6 +151,26 @@ class Settings {
             'sanitize_callback' => 'absint',
             'default'           => 0,
         ] );
+
+        // Public Landing-Page Domain
+        register_setting( self::OPTION_GROUP, 'frs_lead_pages_public_domain_enabled', [
+            'type'              => 'boolean',
+            'sanitize_callback' => [ __CLASS__, 'sanitize_checkbox' ],
+            'default'           => false,
+        ] );
+
+        register_setting( self::OPTION_GROUP, 'frs_lead_pages_public_domain', [
+            'type'              => 'string',
+            'sanitize_callback' => [ __CLASS__, 'sanitize_domain' ],
+            'default'           => '',
+        ] );
+
+        add_settings_section(
+            'frs_lead_pages_public_domain_section',
+            __( 'Public Landing-Page Domain', 'frs-lead-pages' ),
+            [ __CLASS__, 'render_public_domain_section' ],
+            'frs-lead-pages-settings'
+        );
 
         // Branding Section
         add_settings_section(
@@ -449,6 +499,137 @@ class Settings {
 
     public static function render_branding_section() {
         echo '<p>' . __( 'Customize the colors used on landing pages.', 'frs-lead-pages' ) . '</p>';
+    }
+
+    /**
+     * Public landing-page domain section — modern (WPDS-styled) UI.
+     *
+     * Lets an admin publish lead pages on a separate public domain (e.g.
+     * go.21stcenturylending.com) regardless of the domain the site runs on.
+     */
+    public static function render_public_domain_section() {
+        $enabled = (bool) get_option( 'frs_lead_pages_public_domain_enabled', false );
+        $domain  = (string) get_option( 'frs_lead_pages_public_domain', '' );
+        $status  = \FRSLeadPages\Core\DomainMapping::status();
+
+        $rows = [
+            [ __( 'Multisite network', 'frs-lead-pages' ), is_multisite() ],
+        ];
+        if ( is_multisite() ) {
+            $rows[] = [ __( 'SUNRISE enabled in wp-config.php', 'frs-lead-pages' ), $status['sunrise_constant'] ];
+            $rows[] = [ __( 'sunrise.php mapping installed', 'frs-lead-pages' ), $status['sunrise_block'] ];
+            $rows[] = [ __( 'Domain map file written', 'frs-lead-pages' ), $status['map_file'] ];
+        }
+        ?>
+        <style>
+            .frs-pd-card{max-width:760px;margin:12px 0 4px;border:1px solid #dcdcde;border-radius:8px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+            .frs-pd-card__body{padding:20px 24px}
+            .frs-pd-row{display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-top:1px solid #f0f0f1}
+            .frs-pd-row:first-child{border-top:0;padding-top:0}
+            .frs-pd-row__main{flex:1}
+            .frs-pd-label{font-weight:600;margin:0 0 2px}
+            .frs-pd-help{color:#646970;margin:0;font-size:12.5px}
+            .frs-pd-toggle{position:relative;display:inline-block;width:40px;height:22px;flex:0 0 auto;margin-top:2px}
+            .frs-pd-toggle input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2}
+            .frs-pd-toggle .frs-pd-track{position:absolute;inset:0;background:#a7aaad;border-radius:22px;transition:background .15s ease}
+            .frs-pd-toggle .frs-pd-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+            .frs-pd-toggle input:checked + .frs-pd-track{background:var(--wp-admin-theme-color,#3858e9)}
+            .frs-pd-toggle input:checked + .frs-pd-track + .frs-pd-thumb{transform:translateX(18px)}
+            .frs-pd-toggle input:focus-visible + .frs-pd-track{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--wp-admin-theme-color,#3858e9)}
+            .frs-pd-domain{display:flex;align-items:stretch;max-width:460px;margin-top:4px}
+            .frs-pd-domain .frs-pd-scheme{display:flex;align-items:center;padding:0 10px;background:#f0f0f1;border:1px solid #8c8f94;border-right:0;border-radius:4px 0 0 4px;color:#646970;font-family:Menlo,Consolas,monospace;font-size:13px}
+            .frs-pd-domain input[type=text]{flex:1;border-radius:0 4px 4px 0;font-family:Menlo,Consolas,monospace}
+            .frs-pd-preview{margin-top:12px;padding:10px 12px;background:#f6f7f7;border-radius:6px;font-size:13px}
+            .frs-pd-preview code{background:transparent;color:#1d2327}
+            .frs-pd-status{margin-top:6px;border:1px solid #f0f0f1;border-radius:8px;padding:6px 14px;background:#fbfbfc}
+            .frs-pd-status .frs-pd-srow{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid #f0f0f1;font-size:13px}
+            .frs-pd-status .frs-pd-srow:first-child{border-top:0}
+            .frs-pd-pill{display:inline-flex;align-items:center;gap:5px;font-weight:600;font-size:12px;padding:2px 9px;border-radius:11px}
+            .frs-pd-pill.is-on{background:#edfaef;color:#00690c}
+            .frs-pd-pill.is-off{background:#fcf0f1;color:#8a2424}
+            .frs-pd-disabled{opacity:.5;pointer-events:none}
+            .frs-pd-note{margin:8px 0 0;color:#646970;font-size:12.5px}
+        </style>
+        <div class="frs-pd-card">
+            <div class="frs-pd-card__body">
+
+                <div class="frs-pd-row">
+                    <label class="frs-pd-toggle">
+                        <input type="checkbox" id="frs-pd-enabled" name="frs_lead_pages_public_domain_enabled" value="1" <?php checked( $enabled ); ?> />
+                        <span class="frs-pd-track"></span>
+                        <span class="frs-pd-thumb"></span>
+                    </label>
+                    <div class="frs-pd-row__main">
+                        <p class="frs-pd-label"><?php esc_html_e( 'Publish lead pages on a separate public domain', 'frs-lead-pages' ); ?></p>
+                        <p class="frs-pd-help"><?php esc_html_e( 'Serves only the lead pages on the domain below — outside the SSO-gated site — while the rest of the site stays where it is. Works regardless of the domain this site runs on.', 'frs-lead-pages' ); ?></p>
+                    </div>
+                </div>
+
+                <div class="frs-pd-row frs-pd-fields <?php echo $enabled ? '' : 'frs-pd-disabled'; ?>" id="frs-pd-fields">
+                    <div class="frs-pd-row__main">
+                        <p class="frs-pd-label"><label for="frs-pd-domain"><?php esc_html_e( 'Public domain', 'frs-lead-pages' ); ?></label></p>
+                        <div class="frs-pd-domain">
+                            <span class="frs-pd-scheme">https://</span>
+                            <input type="text" id="frs-pd-domain" name="frs_lead_pages_public_domain" value="<?php echo esc_attr( $domain ); ?>" class="regular-text" placeholder="go.21stcenturylending.com" autocapitalize="off" autocorrect="off" spellcheck="false" />
+                        </div>
+                        <div class="frs-pd-preview">
+                            <?php esc_html_e( 'Lead pages will publish to:', 'frs-lead-pages' ); ?>
+                            <code id="frs-pd-preview-url">https://<?php echo esc_html( $domain ?: 'your-domain.com' ); ?>/p/your-page/</code>
+                        </div>
+                        <p class="frs-pd-help" style="margin-top:10px;">
+                            <?php esc_html_e( 'Point this domain at this server (DNS / hosting alias) first. On multisite it is mapped to the lead pages via sunrise.php automatically when enabled.', 'frs-lead-pages' ); ?>
+                        </p>
+                    </div>
+                </div>
+
+                <?php if ( is_multisite() ) : ?>
+                <div class="frs-pd-row">
+                    <div class="frs-pd-row__main">
+                        <p class="frs-pd-label" style="display:flex;align-items:center;gap:10px;">
+                            <?php esc_html_e( 'Mapping status', 'frs-lead-pages' ); ?>
+                            <span class="frs-pd-pill <?php echo $status['ready'] ? 'is-on' : 'is-off'; ?>">
+                                <span class="dashicons dashicons-<?php echo $status['ready'] ? 'yes-alt' : 'warning'; ?>" style="font-size:14px;width:14px;height:14px;"></span>
+                                <?php echo $status['ready'] ? esc_html__( 'Active', 'frs-lead-pages' ) : esc_html__( 'Not active', 'frs-lead-pages' ); ?>
+                            </span>
+                        </p>
+                        <div class="frs-pd-status">
+                            <?php foreach ( $rows as $row ) : ?>
+                                <div class="frs-pd-srow">
+                                    <span class="dashicons dashicons-<?php echo $row[1] ? 'yes' : 'minus'; ?>" style="color:<?php echo $row[1] ? '#00690c' : '#8a2424'; ?>"></span>
+                                    <span><?php echo esc_html( $row[0] ); ?></span>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php foreach ( (array) $status['notes'] as $note ) : ?>
+                            <p class="frs-pd-note"><span class="dashicons dashicons-info-outline" style="font-size:14px;width:14px;height:14px;vertical-align:-2px;"></span> <?php echo esc_html( $note ); ?></p>
+                        <?php endforeach; ?>
+                        <p class="frs-pd-note"><?php esc_html_e( 'Status refreshes after you save.', 'frs-lead-pages' ); ?></p>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+            </div>
+        </div>
+        <script>
+        ( function() {
+            var toggle = document.getElementById( 'frs-pd-enabled' );
+            var fields = document.getElementById( 'frs-pd-fields' );
+            var domain = document.getElementById( 'frs-pd-domain' );
+            var preview = document.getElementById( 'frs-pd-preview-url' );
+            if ( ! toggle ) { return; }
+            function sync() {
+                if ( fields ) { fields.classList.toggle( 'frs-pd-disabled', ! toggle.checked ); }
+            }
+            function updatePreview() {
+                var host = ( domain.value || 'your-domain.com' ).trim().replace( /^https?:\/\//i, '' ).replace( /\/.*$/, '' );
+                preview.textContent = 'https://' + host + '/p/your-page/';
+            }
+            toggle.addEventListener( 'change', sync );
+            if ( domain ) { domain.addEventListener( 'input', updatePreview ); }
+            sync();
+        } )();
+        </script>
+        <?php
     }
 
     public static function render_primary_color_field() {

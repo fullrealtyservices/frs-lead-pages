@@ -39,6 +39,68 @@ class PublicDomain {
 		add_filter( 'preview_post_link', [ __CLASS__, 'filter_preview_link' ], 10, 2 );
 		// Don't let core bounce public-domain requests back to the hub domain.
 		add_filter( 'redirect_canonical', [ __CLASS__, 'maybe_block_canonical' ], 10, 2 );
+		// When a request is served on the public domain, root the (sub)site there
+		// so lead-page paths like /p/{slug} resolve at the domain root. The domain
+		// -> subsite mapping itself lives in sunrise.php.
+		add_filter( 'option_home', [ __CLASS__, 'filter_served_host_url' ] );
+		add_filter( 'option_siteurl', [ __CLASS__, 'filter_served_host_url' ] );
+		// Only lead pages are exposed on the public domain; bounce anything else.
+		add_action( 'template_redirect', [ __CLASS__, 'restrict_public_domain' ], 0 );
+	}
+
+	/**
+	 * On the public domain, serve only lead pages. Any other front-end request
+	 * is sent to the network's main site, so the public domain never exposes the
+	 * rest of the (sub)site.
+	 *
+	 * @return void
+	 */
+	public static function restrict_public_domain(): void {
+		$domain = self::get_domain();
+		if ( $domain === '' ) {
+			return;
+		}
+
+		$host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( (string) $_SERVER['HTTP_HOST'] ) : '';
+		$host = (string) preg_replace( '/:\d+$/', '', $host );
+		if ( $host === '' || $host !== wp_parse_url( $domain, PHP_URL_HOST ) ) {
+			return; // Not the public domain — leave the request alone.
+		}
+
+		if ( is_singular( 'frs_lead_page' ) ) {
+			return; // The one thing allowed here.
+		}
+
+		// Don't interfere with REST, AJAX, or cron served on this host.
+		if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || wp_doing_ajax() || ( defined( 'DOING_CRON' ) && DOING_CRON ) ) {
+			return;
+		}
+
+		wp_redirect( network_home_url( '/' ), 302 );
+		exit;
+	}
+
+	/**
+	 * When the current request is being served on the public domain, return that
+	 * domain (rooted) for home/siteurl so WordPress parses paths at the domain
+	 * root instead of under the subsite path (e.g. /lending). Only affects
+	 * requests whose host IS the public domain; the hub is untouched.
+	 *
+	 * @param mixed $value Stored option value.
+	 * @return mixed
+	 */
+	public static function filter_served_host_url( $value ) {
+		$domain = self::get_domain();
+		if ( $domain === '' ) {
+			return $value;
+		}
+
+		$host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( (string) $_SERVER['HTTP_HOST'] ) : '';
+		if ( $host !== '' && $host === wp_parse_url( $domain, PHP_URL_HOST ) ) {
+			return $domain;
+		}
+
+		return $value;
 	}
 
 	/**
@@ -48,10 +110,18 @@ class PublicDomain {
 	 * @return string
 	 */
 	public static function get_domain(): string {
-		$domain = (string) get_option( self::OPTION, self::DEFAULT_DOMAIN );
+		// Feature is opt-in: no domain unless the mapping is enabled and set.
+		if ( ! DomainMapping::is_enabled() ) {
+			return '';
+		}
+
+		$host = DomainMapping::get_host();
+		if ( $host === '' ) {
+			return '';
+		}
 
 		/** Allow overriding the public landing-page domain. */
-		$domain = (string) apply_filters( 'frs_lead_pages_public_domain', $domain );
+		$domain = (string) apply_filters( 'frs_lead_pages_public_domain', 'https://' . $host );
 		$domain = trim( $domain );
 
 		if ( $domain === '' ) {
@@ -113,7 +183,21 @@ class PublicDomain {
 			return $url;
 		}
 
-		$out = $domain . $parts['path'];
+		$path = $parts['path'];
+
+		// On multisite, drop the subsite path prefix (e.g. /lending) so links are
+		// rooted on the public domain: go.21stcenturylending.com/p/{slug}.
+		if ( is_multisite() ) {
+			$details = get_blog_details( get_current_blog_id() );
+			if ( $details && ! empty( $details->path ) && $details->path !== '/' ) {
+				$site_path = untrailingslashit( $details->path );
+				if ( $site_path !== '' && strpos( $path, $site_path . '/' ) === 0 ) {
+					$path = substr( $path, strlen( $site_path ) );
+				}
+			}
+		}
+
+		$out = $domain . $path;
 		if ( ! empty( $parts['query'] ) ) {
 			$out .= '?' . $parts['query'];
 		}
