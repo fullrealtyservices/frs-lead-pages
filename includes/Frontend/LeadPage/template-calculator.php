@@ -65,6 +65,17 @@ $accent_color   = $data['accent_color'];
 <div class="lead-page lead-page--calculator">
     <!-- Team Header -->
     <header class="calc-header">
+        <!-- Top Left: 21st Century Lending (far left, always). Optional partner logo second — partner pages only. -->
+        <div class="calc-header__brand">
+            <div class="calc-header__logo calc-header__logo--dark">
+                <img src="<?php echo esc_url( \FRSLeadPages\get_21c_logo_url() ); ?>" alt="21st Century Lending">
+            </div>
+            <?php if ( ! empty( $brokerage_logo ) ) : ?>
+                <div class="calc-header__logo">
+                    <img src="<?php echo esc_url( $brokerage_logo ); ?>" alt="Partner">
+                </div>
+            <?php endif; ?>
+        </div>
         <?php if ( $headline ) : ?>
             <h1 class="calc-header__headline"><?php echo esc_html( $headline ); ?></h1>
         <?php endif; ?>

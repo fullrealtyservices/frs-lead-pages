@@ -90,17 +90,17 @@ $calendar_urls = Template::get_calendar_urls( $data );
         <div class="lead-page__hero-overlay"></div>
 
         <div class="lead-page__hero-content">
-            <!-- Top Left: Company Logos (Partner first, then 21C) -->
+            <!-- Top Left: 21st Century Lending (far left, always). Optional partner logo second — partner pages only. -->
             <div class="lead-page__branding">
                 <div class="lead-page__logos">
+                    <div class="lead-page__company-logo lead-page__company-logo--dark">
+                        <img src="<?php echo esc_url( \FRSLeadPages\get_21c_logo_url() ); ?>" alt="21st Century Lending">
+                    </div>
                     <?php if ( $brokerage_logo ) : ?>
                         <div class="lead-page__company-logo">
                             <img src="<?php echo esc_url( $brokerage_logo ); ?>" alt="Partner">
                         </div>
                     <?php endif; ?>
-                    <div class="lead-page__company-logo lead-page__company-logo--dark">
-                        <img src="<?php echo esc_url( \FRSLeadPages\get_21c_logo_url() ); ?>" alt="21st Century Lending">
-                    </div>
                 </div>
             </div>
 
