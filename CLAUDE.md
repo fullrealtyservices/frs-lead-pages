@@ -66,3 +66,18 @@ Use `UserMode::get_mode()` and `UserMode::is_loan_officer()` to detect.
 1. Run `php -l` on all modified wizard files
 2. Load `/marketing/lead-pages/` in browser
 3. Verify no "critical error" message appears
+
+## Deployment (Deployer for Git webhook)
+
+Auto-deploys to production (`myhub21.com` on Cloudron) via the **Deployer for Git (Pro)** plugin, which watches `github.com/fullrealtyservices/frs-lead-pages` on the **`production`** branch.
+
+```bash
+git push origin main                 # dev
+git push origin main:production      # deploy (a server hook requires main be pushed first)
+```
+
+Pushing `production` fires a GitHub webhook to `/wp-json/dfg/v1/package_update?secret=…&type=plugin&package=frs-lead-pages`, which pulls the production branch and installs it live — no manual file copy.
+
+Notes:
+- Push auth: use the gh CLI credential helper (`gh auth setup-git`); the macOS `osxkeychain` helper can fail with `Device not configured`.
+- The deployer's cache flush does **not** reset PHP opcache, so a *modified* file's change may not appear until the app is restarted (`cloudron restart --app <id>`) + `wp cache flush`. New files load fine.
