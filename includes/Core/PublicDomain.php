@@ -46,6 +46,52 @@ class PublicDomain {
 		add_filter( 'option_siteurl', [ __CLASS__, 'filter_served_host_url' ] );
 		// Only lead pages are exposed on the public domain; bounce anything else.
 		add_action( 'template_redirect', [ __CLASS__, 'restrict_public_domain' ], 0 );
+		// Keep the BetterDocs "Instant Answer" knowledge-base widget off the public domain.
+		add_action( 'wp_enqueue_scripts', [ __CLASS__, 'suppress_kb_widget' ], 100 );
+		add_action( 'wp_head', [ __CLASS__, 'suppress_kb_widget_css' ], 99 );
+	}
+
+	/**
+	 * Is the current request being served on the public landing-page domain?
+	 *
+	 * @return bool
+	 */
+	public static function is_public_domain_request(): bool {
+		$domain = self::get_domain();
+		if ( $domain === '' ) {
+			return false;
+		}
+		$host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( (string) $_SERVER['HTTP_HOST'] ) : '';
+		$host = (string) preg_replace( '/:\d+$/', '', $host );
+		return $host !== '' && $host === wp_parse_url( $domain, PHP_URL_HOST );
+	}
+
+	/**
+	 * Dequeue the BetterDocs Instant Answer (knowledge base) widget assets on the
+	 * public domain so it never loads on the landing pages.
+	 *
+	 * @return void
+	 */
+	public static function suppress_kb_widget(): void {
+		if ( ! self::is_public_domain_request() ) {
+			return;
+		}
+		foreach ( [ 'betterdocs-instant-answer', 'betterdocs-instant-answer-cd', 'betterdocs-categorygrid' ] as $handle ) {
+			wp_dequeue_script( $handle );
+			wp_dequeue_style( $handle );
+		}
+	}
+
+	/**
+	 * Hard-hide the Instant Answer widget container on the public domain, in case
+	 * its markup is still printed by a footer hook.
+	 *
+	 * @return void
+	 */
+	public static function suppress_kb_widget_css(): void {
+		if ( self::is_public_domain_request() ) {
+			echo '<style id="frs-hide-kb-widget">#betterdocs-ia{display:none!important;}</style>' . "\n";
+		}
 	}
 
 	/**
