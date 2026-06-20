@@ -25,6 +25,7 @@ html { margin-top: 0 !important; }
 .lead-page {
     display: grid;
     grid-template-columns: 55% 45%;
+    grid-template-rows: 100dvh; /* pin the row to the viewport so the form cell is exactly 100dvh and can scroll (not grow & get clipped) */
     height: 100dvh;
     overflow: hidden;
 }
@@ -370,9 +371,12 @@ html { margin-top: 0 !important; }
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     padding: 48px 40px;
-    display: flex;
-    flex-direction: column;
+    /* Single, independent scroll area. Plain block flow (not flex) so children
+       stack at natural height and the panel reliably scrolls to the very bottom
+       (consent + "Powered by" line) instead of squeezing/clipping them. */
+    display: block;
     height: 100dvh;
+    max-height: 100dvh;
     overflow-y: auto;
     overflow-x: hidden;
     border-left: 1px solid rgba(255, 255, 255, 0.3);
