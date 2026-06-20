@@ -28,7 +28,9 @@ $value_props     = $data['value_props'];
 $lo_data         = $data['lo_data'];
 $realtor_data    = $data['realtor_data'];
 $accent_color    = $data['accent_color'];
-$brokerage_logo  = $data['brokerage_logo'] ?: \FRSLeadPages\get_realtor_logo_url();
+// Partner logo is per-page only (set on partner/co-branded pages via the wizard).
+// No global default — the 21st Century Lending logo is the only default branding.
+$brokerage_logo  = $data['brokerage_logo'];
 
 // Property details (open house)
 $property_address = $data['property_address'];

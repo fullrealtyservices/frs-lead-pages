@@ -104,6 +104,7 @@ function init() {
 
     // Load core classes
     Core\PostTypes::init();
+    Core\PublicDomain::init();
     Core\Shortcodes::init();
     Core\Analytics::init();
 

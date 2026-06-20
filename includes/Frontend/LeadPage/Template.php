@@ -78,8 +78,18 @@ class Template {
         // Enqueue form handler
         $forms_url = plugins_url( 'forms/', FRS_LEAD_PAGES_PLUGIN_FILE );
         wp_enqueue_script( 'frs-lead-form-handler', $forms_url . 'form-handler.js', [], $version, true );
+
+        // Keep form submissions same-origin with the host that served the page
+        // (e.g. the public landing domain) so public pages don't hit CORS.
+        $api_base = rest_url( 'frs-lead-pages/v1' );
+        $host     = isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+        if ( $host ) {
+            $scheme   = is_ssl() ? 'https' : 'http';
+            $api_base = preg_replace( '#^https?://[^/]+#', $scheme . '://' . $host, $api_base );
+        }
+
         wp_localize_script( 'frs-lead-form-handler', 'frsLeadPages', [
-            'apiBase' => esc_url_raw( rest_url( 'frs-lead-pages/v1' ) ),
+            'apiBase' => esc_url_raw( $api_base ),
         ] );
     }
 
@@ -175,6 +185,9 @@ class Template {
 
         // Brokerage logo
         $brokerage_logo = get_post_meta( $page_id, '_frs_brokerage_logo', true );
+        if ( $brokerage_logo ) {
+            $brokerage_logo = \FRSLeadPages\frs_normalize_upload_url( $brokerage_logo );
+        }
 
         return [
             'page_id'            => $page_id,
@@ -267,7 +280,7 @@ class Template {
                 $photo = '';
                 $page_photo = get_post_meta( $page_id, '_frs_realtor_photo', true );
                 if ( $page_photo ) {
-                    $photo = $page_photo;
+                    $photo = \FRSLeadPages\frs_normalize_upload_url( $page_photo );
                 } else {
                     $photo = self::get_user_photo( $realtor_id );
                 }
@@ -300,7 +313,7 @@ class Template {
                 'title'      => 'Sales Associate',
                 'license'    => get_post_meta( $page_id, '_frs_realtor_license', true ),
                 'company'    => get_post_meta( $page_id, '_frs_realtor_company', true ),
-                'photo'      => get_post_meta( $page_id, '_frs_realtor_photo', true ) ?: '',
+                'photo'      => ( $p = get_post_meta( $page_id, '_frs_realtor_photo', true ) ) ? \FRSLeadPages\frs_normalize_upload_url( $p ) : '',
             ];
         }
 
