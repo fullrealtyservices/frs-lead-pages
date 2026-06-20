@@ -448,10 +448,11 @@ html { margin-top: 0 !important; }
     color: #64748b;
 }
 
+/* The whole .lead-page__form panel is the single, independent scroll area.
+   The container must NOT create a second nested scroll — that was clipping the
+   submit button. Keep its natural height so the panel can scroll to reveal it. */
 .lead-page__form-container {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
+    flex-shrink: 0;
 }
 
 /* Lead Capture Forms */

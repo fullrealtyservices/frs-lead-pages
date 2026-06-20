@@ -242,7 +242,7 @@ class Template {
         if ( $page_id ) {
             $page_photo = get_post_meta( $page_id, '_frs_lo_photo', true );
             if ( $page_photo ) {
-                $photo = $page_photo;
+                $photo = \FRSLeadPages\frs_normalize_upload_url( $page_photo );
             }
         }
         

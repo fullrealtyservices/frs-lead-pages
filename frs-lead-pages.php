@@ -744,9 +744,26 @@ function frs_get_attachment_image_url( int $attachment_id, string $size = 'full'
  * @return string Normalized URL.
  */
 function frs_normalize_upload_url( string $url ): string {
+    // Leave non-uploads values (e.g. data: URIs, empty) untouched.
+    if ( $url === '' || strpos( $url, '/wp-content/uploads/' ) === false ) {
+        return $url;
+    }
+
     if ( is_multisite() ) {
         $url = preg_replace( '#/uploads/sites/\d+/#', '/uploads/', $url );
     }
+
+    // Rewrite the host to the current serving site. Upload URLs are sometimes
+    // stored with a stale host (e.g. a .local dev host carried over by a content
+    // migration); the files exist on this server, so re-point them at this site
+    // so they actually load. Fixes headshots/logos that 404'd on the wrong host.
+    if ( preg_match( '#(/wp-content/uploads/.+)$#', $url, $m ) ) {
+        $host = wp_parse_url( home_url(), PHP_URL_HOST );
+        if ( $host ) {
+            $url = ( is_ssl() ? 'https' : 'http' ) . '://' . $host . $m[1];
+        }
+    }
+
     return $url;
 }
 
