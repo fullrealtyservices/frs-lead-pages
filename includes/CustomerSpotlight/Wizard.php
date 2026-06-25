@@ -1895,14 +1895,22 @@ Smooth closing process"></textarea>
 
                     const reader = new FileReader();
                     reader.onload = (ev) => {
-                        const dataUrl = ev.target.result;
-                        photoUrlInput.value = dataUrl;
-                        previewImg.src = dataUrl;
+                        previewImg.src = ev.target.result;
                         preview.style.display = "flex";
                         preview.style.alignItems = "center";
                         uploadDiv.style.display = "none";
                     };
                     reader.readAsDataURL(file);
+                    window.frsLpUploadPhoto(file, (url) => {
+                        photoUrlInput.value = url;
+                        previewImg.src = url;
+                    }, (msg) => {
+                        alert(msg || "Upload failed. Please try again.");
+                        photoUrlInput.value = "";
+                        fileInput.value = "";
+                        preview.style.display = "none";
+                        uploadDiv.style.display = "block";
+                    });
                 });
 
                 // Remove photo
@@ -1948,13 +1956,22 @@ Smooth closing process"></textarea>
                     if (file.size > 5242880) { alert("File size must be less than 5MB"); return; }
                     const reader = new FileReader();
                     reader.onload = (ev) => {
-                        urlInput.value = ev.target.result;
                         previewImg.src = ev.target.result;
                         preview.style.display = "flex";
                         preview.style.alignItems = "center";
                         uploadDiv.style.display = "none";
                     };
                     reader.readAsDataURL(file);
+                    window.frsLpUploadPhoto(file, (url) => {
+                        urlInput.value = url;
+                        previewImg.src = url;
+                    }, (msg) => {
+                        alert(msg || "Upload failed. Please try again.");
+                        urlInput.value = "";
+                        fileInput.value = "";
+                        preview.style.display = "none";
+                        uploadDiv.style.display = "block";
+                    });
                 });
                 if (removeBtn) removeBtn.addEventListener("click", () => {
                     fileInput.value = "";

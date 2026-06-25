@@ -57,4 +57,33 @@
             });
         }
     };
+
+    /**
+     * Shared photo uploader for all wizards.
+     *
+     * Uploads an image File to the WordPress media library via the
+     * frs_lp_upload_photo endpoint and returns a real, persistent URL.
+     * Replaces the old base64 data-URI approach used across the wizards.
+     *
+     * @param {File}     file      Image file from a file input.
+     * @param {Function} onSuccess Called with the uploaded media URL.
+     * @param {Function} onError   Called with an optional error message.
+     */
+    window.frsLpUploadPhoto = function(file, onSuccess, onError) {
+        var config = window.frsWizardConfig || {};
+        var fd = new FormData();
+        fd.append('action', 'frs_lp_upload_photo');
+        fd.append('nonce', config.nonce);
+        fd.append('file', file);
+        fetch(config.ajaxUrl, { method: 'POST', body: fd })
+            .then(function(res) { return res.json(); })
+            .then(function(res) {
+                if (res && res.success && res.data && res.data.url) {
+                    onSuccess(res.data.url);
+                } else {
+                    onError(res && res.data && res.data.message);
+                }
+            })
+            .catch(function() { onError(); });
+    };
 })();

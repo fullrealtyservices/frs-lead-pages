@@ -2156,13 +2156,22 @@ UNUSED;
                     if (file.size > 5242880) { alert('File size must be less than 5MB'); return; }
                     const reader = new FileReader();
                     reader.onload = (ev) => {
-                        urlInput.value = ev.target.result;
                         previewImg.src = ev.target.result;
                         preview.style.display = 'flex';
                         preview.style.alignItems = 'center';
                         uploadDiv.style.display = 'none';
                     };
                     reader.readAsDataURL(file);
+                    window.frsLpUploadPhoto(file, (url) => {
+                        urlInput.value = url;
+                        previewImg.src = url;
+                    }, (msg) => {
+                        alert(msg || 'Upload failed. Please try again.');
+                        urlInput.value = '';
+                        fileInput.value = '';
+                        preview.style.display = 'none';
+                        uploadDiv.style.display = 'block';
+                    });
                 });
                 if (removeBtn) removeBtn.addEventListener('click', () => {
                     fileInput.value = '';
@@ -2259,16 +2268,16 @@ UNUSED;
                 update_post_meta( $post_id, '_frs_realtor_license', sanitize_text_field( $_POST['partner_license'] ?? '' ) );
                 update_post_meta( $post_id, '_frs_realtor_company', sanitize_text_field( $_POST['partner_company'] ?? '' ) );
 
-                // Partner headshot (optional, starts empty)
-                $partner_photo = $_POST['partner_photo'] ?? '';
+                // Partner headshot (optional) — a media-library URL from the upload endpoint.
+                $partner_photo = esc_url_raw( $_POST['partner_photo'] ?? '' );
                 if ( ! empty( $partner_photo ) ) {
-                    update_post_meta( $post_id, '_frs_realtor_photo', wp_check_invalid_utf8( $partner_photo ) );
+                    update_post_meta( $post_id, '_frs_realtor_photo', $partner_photo );
                 }
 
-                // Partner company logo (optional, starts empty)
-                $partner_logo = $_POST['partner_logo'] ?? '';
+                // Partner company logo (optional) — a media-library URL from the upload endpoint.
+                $partner_logo = esc_url_raw( $_POST['partner_logo'] ?? '' );
                 if ( ! empty( $partner_logo ) ) {
-                    update_post_meta( $post_id, '_frs_brokerage_logo', wp_check_invalid_utf8( $partner_logo ) );
+                    update_post_meta( $post_id, '_frs_brokerage_logo', $partner_logo );
                 }
             }
         } else {
