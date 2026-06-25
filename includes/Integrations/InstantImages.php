@@ -42,6 +42,8 @@ class InstantImages {
             'active'            => true,
             'root'              => esc_url_raw( rest_url() ),
             'nonce'             => wp_create_nonce( 'wp_rest' ),
+            'proxy'             => 'https://proxy.getinstantimages.com/api/',
+            'version'           => defined( 'INSTANT_IMAGES_VERSION' ) ? INSTANT_IMAGES_VERSION : '7.2.0',
             'download_width'    => esc_html( $settings->max_width ),
             'download_height'   => esc_html( $settings->max_height ),
             'default_provider'  => esc_html( $settings->default_provider ),
@@ -439,23 +441,29 @@ class InstantImages {
                 loadingEl.style.display = "flex";
 
                 try {
-                    let results = [];
+                    // Route every provider through the Instant Images proxy
+                    // (proxy.getinstantimages.com) so no per-site API keys are needed
+                    // and there are no CORS issues. The proxy normalizes the response.
+                    const proxy = iiConfig.proxy || "https://proxy.getinstantimages.com/api/";
+                    const url = proxy + provider
+                        + "?type=photos&term=" + encodeURIComponent(query)
+                        + "&page=1&order=latest&version=" + encodeURIComponent(iiConfig.version || "7.2.0");
 
-                    switch (provider) {
-                        case "unsplash":
-                            results = await searchUnsplash(query);
-                            break;
-                        case "pixabay":
-                            results = await searchPixabay(query);
-                            break;
-                        case "pexels":
-                            results = await searchPexels(query);
-                            break;
-                        case "openverse":
-                        default:
-                            results = await searchOpenverse(query);
-                            break;
-                    }
+                    const response = await fetch(url);
+                    const data = await response.json();
+
+                    const results = (data.results || []).map(function(img) {
+                        const urls = img.urls || {};
+                        return {
+                            id: img.id,
+                            thumb: urls.thumb || urls.img || urls.full || "",
+                            full: urls.full || urls.img || urls.thumb || "",
+                            download: urls.download_url || urls.full || urls.img || "",
+                            alt: img.alt || img.title || query,
+                            author: (img.user && img.user.name) || img.attribution || "Unknown",
+                            provider: provider
+                        };
+                    });
 
                     displayResults(results, provider);
                 } catch (error) {
