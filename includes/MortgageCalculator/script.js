@@ -203,6 +203,64 @@
         });
     });
 
+    // LO Headshot: use profile photo or upload a new one
+    (function setupMcLoHeadshot() {
+        var hiddenUrl    = document.getElementById('mc-lo-photo-url');
+        var uploadWrap   = document.getElementById('mc-lo-photo-upload-wrap');
+        var uploadDiv    = document.getElementById('mc-lo-photo-upload');
+        var fileInput    = document.getElementById('mc-lo-photo-file');
+        var statusEl     = document.getElementById('mc-lo-photo-status');
+        var previewPhoto = document.getElementById('mc-preview-photo');
+        if (!hiddenUrl || !fileInput) return;
+        var profilePhoto = hiddenUrl.dataset.profilePhoto || (userData.photo || '');
+        var radios = wizard.querySelectorAll('input[name="mc-headshot-source"]');
+        radios.forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                if (!radio.checked) return;
+                if (radio.value === 'upload') {
+                    uploadWrap.style.display = 'block';
+                } else {
+                    uploadWrap.style.display = 'none';
+                    hiddenUrl.value = '';
+                    fileInput.value = '';
+                    if (statusEl) statusEl.style.display = 'none';
+                    if (previewPhoto && profilePhoto) previewPhoto.src = profilePhoto;
+                }
+            });
+        });
+        if (uploadDiv) {
+            uploadDiv.addEventListener('click', function() { fileInput.click(); });
+            uploadDiv.addEventListener('dragover', function(e) { e.preventDefault(); uploadDiv.style.borderColor = '#2563eb'; });
+            uploadDiv.addEventListener('dragleave', function() { uploadDiv.style.borderColor = '#cbd5e1'; });
+            uploadDiv.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadDiv.style.borderColor = '#cbd5e1';
+                if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; fileInput.dispatchEvent(new Event('change', { bubbles: true })); }
+            });
+        }
+        fileInput.addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            if (!file.type.match(/image\/(jpeg|png|gif|webp)/)) { alert('Please upload an image (PNG, JPG, GIF, or WebP)'); return; }
+            if (file.size > 5242880) { alert('File size must be less than 5MB'); return; }
+            if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = '#64748b'; statusEl.textContent = 'Uploading…'; }
+            var reader = new FileReader();
+            reader.onload = function(ev) { if (previewPhoto) previewPhoto.src = ev.target.result; };
+            reader.readAsDataURL(file);
+            window.frsLpUploadPhoto(file, function(url) {
+                hiddenUrl.value = url;
+                if (previewPhoto) previewPhoto.src = url;
+                if (statusEl) { statusEl.style.color = '#16a34a'; statusEl.textContent = 'New headshot ready.'; }
+            }, function(msg) {
+                alert(msg || 'Upload failed. Please try again.');
+                hiddenUrl.value = '';
+                fileInput.value = '';
+                if (statusEl) statusEl.style.display = 'none';
+                if (previewPhoto && profilePhoto) previewPhoto.src = profilePhoto;
+            });
+        });
+    })();
+
     // Generate embed code
     function generateEmbedCode() {
         var gradientStart = document.getElementById('mc-color-start').value;
@@ -221,7 +279,7 @@
 '     data-lo-id="' + userData.id + '"\n' +
 '     data-lo-name="' + loName + '"\n' +
 '     data-lo-nmls="' + loNmls + '"\n' +
-'     data-lo-photo="' + (userData.photo || '') + '"\n' +
+'     data-lo-photo="' + (document.getElementById('mc-lo-photo-url')?.value || userData.photo || '') + '"\n' +
 '     data-lo-email="' + loEmail + '"\n' +
 '     data-lo-phone="' + loPhone + '"\n' +
 (selectedPartner ? '     data-realtor-id="' + selectedPartner.id + '"\n' : '') +

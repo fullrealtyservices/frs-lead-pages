@@ -348,6 +348,29 @@ class Wizard {
 
                         <?php if ( $is_loan_officer ) : ?>
                             <!-- LO Mode: Show LO fields -->
+
+                            <!-- Headshot: use profile photo or upload a new one -->
+                            <div class="mc-field">
+                                <label class="mc-label">Your Headshot</label>
+                                <div class="mc-headshot-choice" role="radiogroup" style="display:flex; gap:12px; flex-wrap:wrap;">
+                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:8px 14px; border:1px solid #cbd5e1; border-radius:8px;">
+                                        <input type="radio" name="mc-headshot-source" value="profile" checked> <span>Use my profile headshot</span>
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:8px 14px; border:1px solid #cbd5e1; border-radius:8px;">
+                                        <input type="radio" name="mc-headshot-source" value="upload"> <span>Upload a new one</span>
+                                    </label>
+                                </div>
+                                <div id="mc-lo-photo-upload-wrap" style="display:none; margin-top:12px;">
+                                    <div class="mc-photo-upload" id="mc-lo-photo-upload" style="border:2px dashed #cbd5e1; padding:20px; border-radius:8px; text-align:center; cursor:pointer;">
+                                        <input type="file" id="mc-lo-photo-file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
+                                        <p style="margin:0; font-weight:500;">Click to upload or drag and drop</p>
+                                        <p style="margin:4px 0 0; font-size:12px; color:#94a3b8;">PNG, JPG, GIF or WebP (max 5MB)</p>
+                                    </div>
+                                    <p id="mc-lo-photo-status" style="display:none; font-size:13px; margin-top:8px;"></p>
+                                </div>
+                                <input type="hidden" id="mc-lo-photo-url" value="" data-profile-photo="<?php echo esc_attr( $user_data['photo'] ); ?>">
+                            </div>
+
                             <div class="mc-field">
                                 <label class="mc-label">Display Name</label>
                                 <input type="text" id="mc-lo-name" class="mc-input" value="<?php echo esc_attr( $user_data['name'] ); ?>">
