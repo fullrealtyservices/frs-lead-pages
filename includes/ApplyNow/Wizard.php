@@ -496,6 +496,35 @@ class Wizard {
 
                         <?php if ( $is_loan_officer ) : ?>
                             <!-- LO Mode: Show LO fields -->
+
+                            <!-- Headshot: use profile photo or upload a new one -->
+                            <div class="an-field" style="margin-bottom:20px;">
+                                <label class="an-label">Your Headshot</label>
+                                <div class="an-headshot-choice" role="radiogroup" style="display:flex; gap:12px; flex-wrap:wrap;">
+                                    <label class="an-headshot-opt" style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:8px 14px; border:1px solid #cbd5e1; border-radius:8px;">
+                                        <input type="radio" name="an-headshot-source" value="profile" checked>
+                                        <span>Use my profile headshot</span>
+                                    </label>
+                                    <label class="an-headshot-opt" style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:8px 14px; border:1px solid #cbd5e1; border-radius:8px;">
+                                        <input type="radio" name="an-headshot-source" value="upload">
+                                        <span>Upload a new one</span>
+                                    </label>
+                                </div>
+                                <div id="an-lo-photo-upload-wrap" style="display:none; margin-top:12px;">
+                                    <div class="an-photo-upload" id="an-lo-photo-upload" style="border:2px dashed #cbd5e1; padding:20px; border-radius:8px; text-align:center; cursor:pointer;">
+                                        <input type="file" id="an-lo-photo-file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin:0 auto 8px; opacity:0.5;">
+                                            <circle cx="12" cy="8" r="4"/>
+                                            <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+                                        </svg>
+                                        <p style="margin:0; font-weight:500;">Click to upload or drag and drop</p>
+                                        <p style="margin:4px 0 0; font-size:12px; color:#94a3b8;">PNG, JPG, GIF or WebP (max 5MB)</p>
+                                    </div>
+                                    <p id="an-lo-photo-status" style="display:none; font-size:13px; margin-top:8px;"></p>
+                                </div>
+                                <input type="hidden" id="an-lo-photo-url" value="" data-profile-photo="<?php echo esc_attr( $user_data['photo'] ); ?>">
+                            </div>
+
                             <div class="an-row">
                                 <div class="an-field an-field--half">
                                     <label class="an-label">Display Name</label>
@@ -747,6 +776,13 @@ class Wizard {
             update_post_meta( $post_id, '_frs_lo_email', sanitize_email( $_POST['lo_email'] ?? '' ) );
             update_post_meta( $post_id, '_frs_lo_nmls', sanitize_text_field( $_POST['lo_nmls'] ?? '' ) );
 
+            // Optional custom headshot chosen in the Branding step. Empty means
+            // "use my profile headshot" — the template falls back to get_user_photo().
+            $lo_photo = esc_url_raw( $_POST['lo_photo'] ?? '' );
+            if ( ! empty( $lo_photo ) ) {
+                update_post_meta( $post_id, '_frs_lo_photo', $lo_photo );
+            }
+
             // Optional Realtor partner (manual entry from Co-branded step)
             $partner_name = sanitize_text_field( $_POST['partner_name'] ?? '' );
             if ( ! empty( $partner_name ) ) {
@@ -757,16 +793,16 @@ class Wizard {
                 update_post_meta( $post_id, '_frs_realtor_license', sanitize_text_field( $_POST['partner_license'] ?? '' ) );
                 update_post_meta( $post_id, '_frs_realtor_company', sanitize_text_field( $_POST['partner_company'] ?? '' ) );
 
-                // Partner headshot (optional, starts empty)
-                $partner_photo = $_POST['partner_photo'] ?? '';
+                // Partner headshot (optional) — a media-library URL from the upload endpoint.
+                $partner_photo = esc_url_raw( $_POST['partner_photo'] ?? '' );
                 if ( ! empty( $partner_photo ) ) {
-                    update_post_meta( $post_id, '_frs_realtor_photo', wp_check_invalid_utf8( $partner_photo ) );
+                    update_post_meta( $post_id, '_frs_realtor_photo', $partner_photo );
                 }
 
-                // Partner company logo (optional, starts empty)
-                $partner_logo = $_POST['partner_logo'] ?? '';
+                // Partner company logo (optional) — a media-library URL from the upload endpoint.
+                $partner_logo = esc_url_raw( $_POST['partner_logo'] ?? '' );
                 if ( ! empty( $partner_logo ) ) {
-                    update_post_meta( $post_id, '_frs_brokerage_logo', wp_check_invalid_utf8( $partner_logo ) );
+                    update_post_meta( $post_id, '_frs_brokerage_logo', $partner_logo );
                 }
             }
         } else {

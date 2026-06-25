@@ -167,6 +167,9 @@ function init() {
     add_action( 'wp_ajax_frs_delete_lead_page', __NAMESPACE__ . '\\ajax_delete_lead_page' );
     add_action( 'wp_ajax_frs_get_analytics', __NAMESPACE__ . '\\ajax_get_analytics' );
 
+    // Shared photo upload endpoint used by the wizards (LO headshot + partner photo).
+    add_action( 'wp_ajax_frs_lp_upload_photo', __NAMESPACE__ . '\\ajax_upload_photo' );
+
     // Generate QR code on page publish (Open House only)
     add_action( 'save_post_frs_lead_page', __NAMESPACE__ . '\\maybe_generate_qr', 10, 2 );
 }
@@ -847,4 +850,69 @@ function get_user_photo( $user_id ) {
     }
 
     return '';
+}
+
+/**
+ * Shared AJAX handler: upload an image to the media library and return its URL.
+ *
+ * Used by the lead-page wizards so loan officers can upload a custom headshot
+ * and add a custom partner photo. Returns a real, persistent media-library URL
+ * (replaces the previous fragile base64 data-URI approach).
+ *
+ * Expects multipart/form-data with `file`, `nonce` (action: frs_lead_pages).
+ */
+function ajax_upload_photo(): void {
+    check_ajax_referer( 'frs_lead_pages', 'nonce' );
+
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( [ 'message' => 'You must be logged in to upload.' ] );
+    }
+
+    if ( empty( $_FILES['file'] ) || ! isset( $_FILES['file']['tmp_name'] ) ) {
+        wp_send_json_error( [ 'message' => 'No file received.' ] );
+    }
+
+    $file = $_FILES['file'];
+
+    // Validate MIME type.
+    $allowed_types = [ 'image/jpeg', 'image/png', 'image/gif', 'image/webp' ];
+    if ( empty( $file['type'] ) || ! in_array( $file['type'], $allowed_types, true ) ) {
+        wp_send_json_error( [ 'message' => 'Please upload an image (JPEG, PNG, GIF, or WebP).' ] );
+    }
+
+    // Validate size (5 MB).
+    if ( ! empty( $file['size'] ) && (int) $file['size'] > 5 * 1024 * 1024 ) {
+        wp_send_json_error( [ 'message' => 'Image must be under 5MB.' ] );
+    }
+
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    require_once ABSPATH . 'wp-admin/includes/media.php';
+
+    $overrides = [
+        'test_form' => false,
+        'mimes'     => [
+            'jpg|jpeg|jpe' => 'image/jpeg',
+            'png'          => 'image/png',
+            'gif'          => 'image/gif',
+            'webp'         => 'image/webp',
+        ],
+    ];
+
+    $attachment_id = media_handle_upload( 'file', 0, [], $overrides );
+
+    if ( is_wp_error( $attachment_id ) ) {
+        wp_send_json_error( [ 'message' => $attachment_id->get_error_message() ] );
+    }
+
+    $url = wp_get_attachment_image_url( $attachment_id, 'full' );
+
+    if ( ! $url ) {
+        wp_send_json_error( [ 'message' => 'Upload succeeded but no URL was generated.' ] );
+    }
+
+    wp_send_json_success( [
+        'id'  => (int) $attachment_id,
+        'url' => frs_normalize_upload_url( $url ),
+    ] );
 }

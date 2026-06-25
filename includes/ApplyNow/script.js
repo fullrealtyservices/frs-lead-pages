@@ -151,6 +151,24 @@
         });
     }
 
+    // Upload an image file to the WordPress media library; returns a real URL.
+    function uploadPhotoToMedia(file, onSuccess, onError) {
+        var fd = new FormData();
+        fd.append('action', 'frs_lp_upload_photo');
+        fd.append('nonce', config.nonce);
+        fd.append('file', file);
+        fetch(config.ajaxUrl, { method: 'POST', body: fd })
+            .then(function(res) { return res.json(); })
+            .then(function(response) {
+                if (response && response.success && response.data && response.data.url) {
+                    onSuccess(response.data.url);
+                } else {
+                    onError(response && response.data && response.data.message);
+                }
+            })
+            .catch(function() { onError(); });
+    }
+
     // Partner headshot + company logo uploads (separate fields)
     function setupAnPartnerUpload(suffix) {
         var uploadDiv  = document.getElementById('an-partner-' + suffix + '-upload');
@@ -177,15 +195,25 @@
             if (!file) return;
             if (!file.type.match(/image\/(jpeg|png|gif|webp)/)) { alert('Please upload an image (PNG, JPG, GIF, or WebP)'); return; }
             if (file.size > 5242880) { alert('File size must be less than 5MB'); return; }
+            // Show an instant local preview, then upload to the media library.
             var reader = new FileReader();
             reader.onload = function(ev) {
-                urlInput.value = ev.target.result;
                 previewImg.src = ev.target.result;
                 preview.style.display = 'flex';
                 preview.style.alignItems = 'center';
                 uploadDiv.style.display = 'none';
             };
             reader.readAsDataURL(file);
+            uploadPhotoToMedia(file, function(url) {
+                urlInput.value = url;
+                previewImg.src = url;
+            }, function(msg) {
+                alert(msg || 'Upload failed. Please try again.');
+                urlInput.value = '';
+                preview.style.display = 'none';
+                uploadDiv.style.display = 'block';
+                fileInput.value = '';
+            });
         });
         if (removeBtn) removeBtn.addEventListener('click', function() {
             fileInput.value = '';
@@ -196,6 +224,72 @@
     }
     setupAnPartnerUpload('photo');
     setupAnPartnerUpload('logo');
+
+    // ===== LO Headshot: use profile photo or upload a new one =====
+    (function setupLoHeadshot() {
+        var hiddenUrl    = document.getElementById('an-lo-photo-url');
+        var uploadWrap   = document.getElementById('an-lo-photo-upload-wrap');
+        var uploadDiv    = document.getElementById('an-lo-photo-upload');
+        var fileInput    = document.getElementById('an-lo-photo-file');
+        var statusEl     = document.getElementById('an-lo-photo-status');
+        var previewPhoto = document.getElementById('an-preview-photo');
+        if (!hiddenUrl || !fileInput) return;
+
+        var profilePhoto = hiddenUrl.dataset.profilePhoto || (userData.photo || '');
+        var radios = wizard.querySelectorAll('input[name="an-headshot-source"]');
+
+        radios.forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                if (!radio.checked) return;
+                if (radio.value === 'upload') {
+                    uploadWrap.style.display = 'block';
+                } else {
+                    uploadWrap.style.display = 'none';
+                    hiddenUrl.value = '';
+                    fileInput.value = '';
+                    if (statusEl) statusEl.style.display = 'none';
+                    if (previewPhoto && profilePhoto) previewPhoto.src = profilePhoto;
+                }
+            });
+        });
+
+        if (uploadDiv) {
+            uploadDiv.addEventListener('click', function() { fileInput.click(); });
+            uploadDiv.addEventListener('dragover', function(e) { e.preventDefault(); uploadDiv.style.borderColor = '#6366f1'; });
+            uploadDiv.addEventListener('dragleave', function() { uploadDiv.style.borderColor = '#cbd5e1'; });
+            uploadDiv.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadDiv.style.borderColor = '#cbd5e1';
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+        }
+
+        fileInput.addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            if (!file.type.match(/image\/(jpeg|png|gif|webp)/)) { alert('Please upload an image (PNG, JPG, GIF, or WebP)'); return; }
+            if (file.size > 5242880) { alert('File size must be less than 5MB'); return; }
+            if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = '#64748b'; statusEl.textContent = 'Uploading…'; }
+            // Instant local preview while the upload runs.
+            var reader = new FileReader();
+            reader.onload = function(ev) { if (previewPhoto) previewPhoto.src = ev.target.result; };
+            reader.readAsDataURL(file);
+            uploadPhotoToMedia(file, function(url) {
+                hiddenUrl.value = url;
+                if (previewPhoto) previewPhoto.src = url;
+                if (statusEl) { statusEl.style.color = '#16a34a'; statusEl.textContent = 'New headshot ready.'; }
+            }, function(msg) {
+                alert(msg || 'Upload failed. Please try again.');
+                hiddenUrl.value = '';
+                fileInput.value = '';
+                if (statusEl) statusEl.style.display = 'none';
+                if (previewPhoto && profilePhoto) previewPhoto.src = profilePhoto;
+            });
+        });
+    })();
 
     // ===== Schedule Type Cards =====
     var scheduleCards = wizard.querySelectorAll('.an-schedule-card');
@@ -564,6 +658,7 @@
             data.lo_nmls = (document.getElementById('an-lo-nmls') || {}).value || '';
             data.lo_phone = (document.getElementById('an-lo-phone') || {}).value || '';
             data.lo_email = (document.getElementById('an-lo-email') || {}).value || '';
+            data.lo_photo = (document.getElementById('an-lo-photo-url') || {}).value || '';
             data.arrive_link = userData.arrive || '';
 
             if (selectedPartner) {
