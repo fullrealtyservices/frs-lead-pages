@@ -260,9 +260,19 @@
                     alert('Please select Solo Page or Co-branded');
                     return false;
                 }
-                if (pageType === 'cobranded' && !selectedPartner) {
-                    alert('Please select a partner for co-branding');
-                    return false;
+                if (pageType === 'cobranded') {
+                    var partnerName  = document.getElementById('rq-partner-name-input')  ? document.getElementById('rq-partner-name-input').value : '';
+                    var partnerEmail = document.getElementById('rq-partner-email-input') ? document.getElementById('rq-partner-email-input').value : '';
+                    var partnerPhone = document.getElementById('rq-partner-phone-input') ? document.getElementById('rq-partner-phone-input').value : '';
+                    var partnerPhoto = document.getElementById('rq-partner-photo-url')   ? document.getElementById('rq-partner-photo-url').value : '';
+                    var partnerLogo  = document.getElementById('rq-partner-logo-url')    ? document.getElementById('rq-partner-logo-url').value : '';
+                    partnerName  = partnerName.trim();
+                    partnerEmail = partnerEmail.trim();
+                    partnerPhone = partnerPhone.trim();
+                    if (!partnerName)  { alert("Please enter the partner's name");         return false; }
+                    if (!partnerEmail) { alert("Please enter the partner's email");        return false; }
+                    if (!partnerPhone) { alert("Please enter the partner's phone number"); return false; }
+                    selectedPartner = { id: 0, name: partnerName, email: partnerEmail, phone: partnerPhone, photo: partnerPhoto, logo: partnerLogo, company: '', license: '', nmls: '' };
                 }
             } else {
                 var partnerDropdown = document.getElementById('rq-partner-dropdown');
@@ -313,6 +323,57 @@
         }
         return true;
     }
+
+    // Partner headshot + company logo uploads (manual co-brand entry)
+    function setupRqPartnerUpload(suffix) {
+        var uploadDiv  = document.getElementById('rq-partner-' + suffix + '-upload');
+        var fileInput  = document.getElementById('rq-partner-' + suffix + '-file');
+        var preview    = document.getElementById('rq-partner-' + suffix + '-preview');
+        var previewImg = document.getElementById('rq-partner-' + suffix + '-preview-img');
+        var removeBtn  = document.getElementById('rq-partner-' + suffix + '-remove');
+        var urlInput   = document.getElementById('rq-partner-' + suffix + '-url');
+        if (!uploadDiv || !fileInput) return;
+        uploadDiv.addEventListener('click', function() { fileInput.click(); });
+        uploadDiv.addEventListener('dragover', function(e) { e.preventDefault(); uploadDiv.style.borderColor = '#10b981'; });
+        uploadDiv.addEventListener('dragleave', function() { uploadDiv.style.borderColor = '#cbd5e1'; });
+        uploadDiv.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadDiv.style.borderColor = '#cbd5e1';
+            if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; fileInput.dispatchEvent(new Event('change', { bubbles: true })); }
+        });
+        fileInput.addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            if (!file.type.match(/image\/(jpeg|png|gif|webp)/)) { alert('Please upload an image (PNG, JPG, GIF, or WebP)'); return; }
+            if (file.size > 5242880) { alert('File size must be less than 5MB'); return; }
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                previewImg.src = ev.target.result;
+                preview.style.display = 'flex';
+                preview.style.alignItems = 'center';
+                uploadDiv.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+            window.frsLpUploadPhoto(file, function(url) {
+                urlInput.value = url;
+                previewImg.src = url;
+            }, function(msg) {
+                alert(msg || 'Upload failed. Please try again.');
+                urlInput.value = '';
+                fileInput.value = '';
+                preview.style.display = 'none';
+                uploadDiv.style.display = 'block';
+            });
+        });
+        if (removeBtn) removeBtn.addEventListener('click', function() {
+            fileInput.value = '';
+            urlInput.value = '';
+            preview.style.display = 'none';
+            uploadDiv.style.display = 'block';
+        });
+    }
+    setupRqPartnerUpload('photo');
+    setupRqPartnerUpload('logo');
 
     // LO Headshot: use profile photo or upload a new one
     (function setupRqLoHeadshot() {
@@ -400,6 +461,8 @@
                 data.partner_company = selectedPartner.company;
                 data.partner_phone = selectedPartner.phone;
                 data.partner_email = selectedPartner.email;
+                data.partner_photo = selectedPartner.photo || '';
+                data.partner_logo = selectedPartner.logo || '';
             }
         } else {
             data.realtor_name = document.getElementById('rq-realtor-name') ? document.getElementById('rq-realtor-name').value : userData.name;
