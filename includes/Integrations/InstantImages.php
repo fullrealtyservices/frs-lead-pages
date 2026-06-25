@@ -454,11 +454,15 @@ class InstantImages {
 
                     const results = (data.results || []).map(function(img) {
                         const urls = img.urls || {};
+                        // Sideload uses urls.full: its host (images.unsplash.com,
+                        // live.staticflickr.com, etc.) is what the instant-images/download
+                        // endpoint allowlists. download_url points at api.unsplash.com,
+                        // which is NOT allowlisted and fails the remote-file check.
                         return {
                             id: img.id,
                             thumb: urls.thumb || urls.img || urls.full || "",
                             full: urls.full || urls.img || urls.thumb || "",
-                            download: urls.download_url || urls.full || urls.img || "",
+                            download: urls.full || urls.img || urls.thumb || "",
                             alt: img.alt || img.title || query,
                             author: (img.user && img.user.name) || img.attribution || "Unknown",
                             provider: provider
