@@ -76,7 +76,7 @@ class Firecrawl {
                     ],
                 ],
             ]),
-            'timeout' => 30,
+            'timeout' => 60,
         ]);
 
         if ( is_wp_error( $response ) ) {
@@ -167,7 +167,7 @@ class Firecrawl {
                     'formats' => [ 'markdown' ],
                 ],
             ]),
-            'timeout' => 30,
+            'timeout' => 60,
         ]);
 
         if ( is_wp_error( $response ) ) {
