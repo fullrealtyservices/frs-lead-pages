@@ -725,6 +725,7 @@ class Wizard {
         <style>
             .oh-wizard {
                 display: block;
+                position: relative;
                 min-height: 100dvh;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             }
@@ -769,8 +770,10 @@ class Wizard {
                 max-width: 400px;
             }
             .oh-wizard__form {
-                margin-left: 60%;
-                width: 40%;
+                position: absolute;
+                left: 60%;
+                right: 0;
+                top: 0;
                 min-height: 100dvh;
                 background: #fff;
                 padding: 24px 32px 96px;
