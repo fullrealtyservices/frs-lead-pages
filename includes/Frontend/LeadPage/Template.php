@@ -251,14 +251,22 @@ class Template {
             $photo = self::get_user_photo( $lo_id );
         }
 
+        // Prefer the team info the LO entered in the wizard (saved per-page)
+        // over their profile data, so their "Your Team Info" edits actually
+        // populate the published page. Profile values are the fallback.
+        $page_name  = $page_id ? get_post_meta( $page_id, '_frs_lo_name', true )  : '';
+        $page_email = $page_id ? get_post_meta( $page_id, '_frs_lo_email', true ) : '';
+        $page_phone = $page_id ? get_post_meta( $page_id, '_frs_lo_phone', true ) : '';
+        $page_nmls  = $page_id ? get_post_meta( $page_id, '_frs_lo_nmls', true )  : '';
+
         return [
             'id'         => $lo_id,
-            'name'       => $lo_user->display_name,
+            'name'       => $page_name ?: $lo_user->display_name,
             'first_name' => $lo_user->first_name,
             'last_name'  => $lo_user->last_name,
-            'email'      => $lo_user->user_email,
-            'phone'      => get_user_meta( $lo_id, 'phone', true ) ?: get_user_meta( $lo_id, 'phone_number', true ) ?: get_user_meta( $lo_id, 'mobile_phone', true ),
-            'nmls'       => \FRSLeadPages\frs_get_user_nmls( $lo_id ),
+            'email'      => $page_email ?: $lo_user->user_email,
+            'phone'      => $page_phone ?: ( get_user_meta( $lo_id, 'phone', true ) ?: get_user_meta( $lo_id, 'phone_number', true ) ?: get_user_meta( $lo_id, 'mobile_phone', true ) ),
+            'nmls'       => $page_nmls ?: \FRSLeadPages\frs_get_user_nmls( $lo_id ),
             'title'      => get_user_meta( $lo_id, 'job_title', true ) ?: 'Loan Officer',
             'company'    => '21st Century Lending',
             'photo'      => $photo,
@@ -327,47 +335,56 @@ class Template {
      * @return string Photo URL
      */
     public static function get_user_photo( int $user_id ): string {
-        if ( ! $user_id ) {
+        if ( $user_id <= 0 ) {
             return '';
         }
 
-        // 1. Check FRS Profiles table (headshot_id)
-        if ( class_exists( 'FRSUsers\Models\Profile' ) ) {
-            $profile = \FRSUsers\Models\Profile::get_by_user_id( $user_id );
-            if ( $profile && ! empty( $profile->headshot_id ) ) {
-                $url = \FRSLeadPages\frs_get_attachment_url( (int) $profile->headshot_id );
-                if ( $url ) {
-                    return $url;
+        // Single source of truth for FRS user headshots across the whole
+        // network: \FRSUsers\Core\Avatar::get_url() (CDN -> main-site
+        // attachment, always full size, no size rewrites). Every context —
+        // directory, profiles, wizards, published pages — must resolve the
+        // same photo, so go through it first. Fully guarded: a missing
+        // class/method or any runtime error can never fatal a public page.
+        try {
+            if ( is_callable( [ '\FRSUsers\Core\Avatar', 'get_url' ] ) ) {
+                $url = \FRSUsers\Core\Avatar::get_url( $user_id );
+                if ( is_string( $url ) && $url !== '' ) {
+                    return $url; // already a complete, correct URL — do not rewrite.
                 }
             }
+        } catch ( \Throwable $e ) {
+            // ignore and try fallbacks
         }
 
-        // 2. Check user_profile_photo meta (SureDash)
-        $suredash_photo = get_user_meta( $user_id, 'user_profile_photo', true );
-        if ( ! empty( $suredash_photo ) ) {
-            return \FRSLeadPages\frs_normalize_upload_url( $suredash_photo );
+        // Optional legacy meta sources — any of these may be absent; never
+        // assume a key exists.
+        try {
+            foreach ( [ 'user_profile_photo', 'custom_avatar_url', 'profile_photo' ] as $meta_key ) {
+                $value = get_user_meta( $user_id, $meta_key, true );
+                if ( is_string( $value ) && $value !== '' ) {
+                    return \FRSLeadPages\frs_normalize_upload_url( $value );
+                }
+            }
+            $simple = get_user_meta( $user_id, 'simple_local_avatar', true );
+            if ( is_array( $simple ) && ! empty( $simple['full'] ) && is_string( $simple['full'] ) ) {
+                return \FRSLeadPages\frs_normalize_upload_url( $simple['full'] );
+            }
+        } catch ( \Throwable $e ) {
+            // ignore and try the final fallback
         }
 
-        // 3. Check Simple Local Avatars
-        $simple_avatar = get_user_meta( $user_id, 'simple_local_avatar', true );
-        if ( ! empty( $simple_avatar ) && ! empty( $simple_avatar['full'] ) ) {
-            return \FRSLeadPages\frs_normalize_upload_url( $simple_avatar['full'] );
+        // Last resort: the WordPress avatar (no forced pixel size that might
+        // not exist), but never the gravatar mystery-person placeholder.
+        try {
+            $avatar = get_avatar_url( $user_id );
+            if ( is_string( $avatar ) && $avatar !== '' && strpos( $avatar, 'gravatar.com/avatar' ) === false ) {
+                return \FRSLeadPages\frs_normalize_upload_url( $avatar );
+            }
+        } catch ( \Throwable $e ) {
+            // ignore
         }
 
-        // 4. Check custom_avatar_url meta
-        $custom_avatar = get_user_meta( $user_id, 'custom_avatar_url', true );
-        if ( ! empty( $custom_avatar ) ) {
-            return \FRSLeadPages\frs_normalize_upload_url( $custom_avatar );
-        }
-
-        // 5. Check profile_photo meta
-        $profile_photo = get_user_meta( $user_id, 'profile_photo', true );
-        if ( ! empty( $profile_photo ) ) {
-            return \FRSLeadPages\frs_normalize_upload_url( $profile_photo );
-        }
-
-        // 6. Fallback to Gravatar
-        return \FRSLeadPages\frs_normalize_upload_url( get_avatar_url( $user_id, [ 'size' => 200 ] ) );
+        return '';
     }
 
     /**

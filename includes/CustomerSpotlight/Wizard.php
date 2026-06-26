@@ -515,7 +515,7 @@ Smooth closing process"></textarea>
                                         <p id="cs-lo-photo-status" style="margin:8px 0 0; font-size:13px; color:#64748b;">Using your profile headshot</p>
                                     </div>
                                 </div>
-                                <input type="hidden" id="cs-lo-photo-url" value="">
+                                <input type="hidden" id="cs-lo-photo-url" value="<?php echo esc_url( $user_data['photo'] ?? '' ); ?>">
                             </div>
 
                             <p class="cs-section-label" style="margin-top:24px;">Realtor Partner (from Step 1)</p>
