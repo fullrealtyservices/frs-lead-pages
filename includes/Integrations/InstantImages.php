@@ -136,6 +136,11 @@ class InstantImages {
                         <p>Searching...</p>
                     </div>
                 </div>
+                <div class="<?php echo esc_attr( $prefix ); ?>-ii-modal__footer">
+                    <button type="button" class="<?php echo esc_attr( $prefix ); ?>-ii-loadmore" style="display:none;">Load more results</button>
+                    <span class="<?php echo esc_attr( $prefix ); ?>-ii-footer-spacer"></span>
+                    <button type="button" class="<?php echo esc_attr( $prefix ); ?>-ii-use" disabled>Use this photo</button>
+                </div>
             </div>
         </div>
         <?php
@@ -384,6 +389,78 @@ class InstantImages {
                 padding: 40px;
                 color: #64748b;
             }
+            .' . $prefix . '-ii-image--selected {
+                outline: 4px solid ' . $accent_color . ';
+                outline-offset: -4px;
+            }
+            .' . $prefix . '-ii-image__check {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: ' . $accent_color . ';
+                color: #fff;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                font-size: 16px;
+                font-weight: 700;
+                z-index: 2;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            }
+            .' . $prefix . '-ii-image--selected .' . $prefix . '-ii-image__check {
+                display: flex;
+            }
+            .' . $prefix . '-ii-modal__footer {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 16px 24px;
+                border-top: 1px solid #e5e7eb;
+                background: #fff;
+                flex-shrink: 0;
+            }
+            .' . $prefix . '-ii-footer-spacer {
+                flex: 1;
+            }
+            .' . $prefix . '-ii-use {
+                padding: 12px 28px;
+                font-size: 15px;
+                font-weight: 600;
+                color: #fff;
+                background: ' . $accent_color . ';
+                border: none;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .' . $prefix . '-ii-use:hover:not(:disabled) {
+                filter: brightness(0.9);
+            }
+            .' . $prefix . '-ii-use:disabled {
+                opacity: 0.45;
+                cursor: not-allowed;
+            }
+            .' . $prefix . '-ii-loadmore {
+                padding: 12px 20px;
+                font-size: 14px;
+                font-weight: 600;
+                color: ' . $accent_color . ';
+                background: #fff;
+                border: 2px solid ' . $accent_color . ';
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .' . $prefix . '-ii-loadmore:hover:not(:disabled) {
+                background: #f0fdf4;
+            }
+            .' . $prefix . '-ii-loadmore:disabled {
+                opacity: 0.6;
+                cursor: wait;
+            }
         </style>';
     }
 
@@ -420,6 +497,11 @@ class InstantImages {
             const searchBtn = iiModal.querySelector(".' . $prefix . '-ii-search__btn");
             const resultsContainer = document.getElementById("' . $prefix . '-ii-results");
             const loadingEl = document.getElementById("' . $prefix . '-ii-loading");
+            const useBtn = iiModal.querySelector(".' . $prefix . '-ii-use");
+            const loadMoreBtn = iiModal.querySelector(".' . $prefix . '-ii-loadmore");
+            let iiQuery = "";
+            let iiPage = 1;
+            let iiSelected = null;
 
             // Open/close modal
             const openBtn = document.getElementById("' . $prefix . '-ii-open-btn");
@@ -439,22 +521,35 @@ class InstantImages {
                 iiModal.classList.remove("' . $prefix . '-ii-modal--open");
             }
 
-            // Search functionality
-            async function searchImages(query) {
+            // Search functionality. append=true loads the next page and keeps
+            // existing results (pagination); otherwise it starts a fresh search.
+            async function searchImages(query, append) {
                 const provider = iiModal.querySelector("input[name=\'' . $prefix . '-ii-provider\']").value;
 
-                resultsContainer.innerHTML = "";
-                resultsContainer.style.display = "none";
-                loadingEl.style.display = "flex";
+                if (!append) {
+                    iiQuery = query;
+                    iiPage = 1;
+                    iiSelected = null;
+                    useBtn.disabled = true;
+                    resultsContainer.innerHTML = "";
+                    resultsContainer.style.display = "none";
+                    loadingEl.style.display = "flex";
+                    loadMoreBtn.style.display = "none";
+                } else {
+                    loadMoreBtn.disabled = true;
+                    loadMoreBtn.textContent = "Loading...";
+                }
 
                 try {
                     // Route every provider through the Instant Images proxy
                     // (proxy.getinstantimages.com) so no per-site API keys are needed
                     // and there are no CORS issues. The proxy normalizes the response.
+                    // order=relevant returns the best matches for the term; latest
+                    // returned newest-but-irrelevant photos.
                     const proxy = iiConfig.proxy || "https://proxy.getinstantimages.com/api/";
                     const url = proxy + provider
-                        + "?type=photos&term=" + encodeURIComponent(query)
-                        + "&page=1&order=latest&version=" + encodeURIComponent(iiConfig.version || "7.2.0");
+                        + "?type=photos&term=" + encodeURIComponent(iiQuery)
+                        + "&page=" + iiPage + "&order=relevant&version=" + encodeURIComponent(iiConfig.version || "7.2.0");
 
                     const response = await fetch(url);
                     const data = await response.json();
@@ -470,20 +565,26 @@ class InstantImages {
                             thumb: urls.thumb || urls.img || urls.full || "",
                             full: urls.full || urls.img || urls.thumb || "",
                             download: urls.full || urls.img || urls.thumb || "",
-                            alt: img.alt || img.title || query,
+                            alt: img.alt || img.title || iiQuery,
                             author: (img.user && img.user.name) || img.attribution || "Unknown",
                             provider: provider
                         };
                     });
 
-                    displayResults(results, provider);
+                    displayResults(results, provider, append);
+                    // A full page (20) suggests more pages are available.
+                    loadMoreBtn.style.display = results.length >= 20 ? "inline-block" : "none";
                 } catch (error) {
                     console.error("Search error:", error);
-                    resultsContainer.innerHTML = "<div class=\"' . $prefix . '-ii-no-results\">Error searching images. Please try again.</div>";
+                    if (!append) {
+                        resultsContainer.innerHTML = "<div class=\"' . $prefix . '-ii-no-results\">Error searching images. Please try again.</div>";
+                    }
                 }
 
                 loadingEl.style.display = "none";
                 resultsContainer.style.display = "grid";
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.textContent = "Load more results";
             }
 
             async function searchUnsplash(query) {
@@ -608,33 +709,49 @@ class InstantImages {
                 }));
             }
 
-            function displayResults(results, provider) {
-                if (results.length === 0) {
+            function displayResults(results, provider, append) {
+                if (!append && results.length === 0) {
                     resultsContainer.innerHTML = "<div class=\"' . $prefix . '-ii-no-results\">No images found. Try a different search term.</div>";
                     return;
                 }
 
-                resultsContainer.innerHTML = results.map(img => `
+                const html = results.map(img => `
                     <div class="' . $prefix . '-ii-image" data-img=\'${JSON.stringify(img)}\'>
+                        <div class="' . $prefix . '-ii-image__check">&#10003;</div>
                         <img src="${img.thumb}" alt="${img.alt}" loading="eager" decoding="async" referrerpolicy="no-referrer">
                         <div class="' . $prefix . '-ii-image__overlay">
-                            <button type="button" class="' . $prefix . '-ii-image__select">Select Image</button>
+                            <button type="button" class="' . $prefix . '-ii-image__select">Select</button>
                         </div>
                     </div>
                 `).join("");
 
-                // Add click handlers
-                resultsContainer.querySelectorAll(".' . $prefix . '-ii-image").forEach(el => {
-                    el.addEventListener("click", () => selectImage(el));
+                if (append) {
+                    resultsContainer.insertAdjacentHTML("beforeend", html);
+                } else {
+                    resultsContainer.innerHTML = html;
+                }
+
+                // Clicking a tile highlights it (does not commit). The footer
+                // "Use this photo" button commits the highlighted selection.
+                resultsContainer.querySelectorAll(".' . $prefix . '-ii-image:not([data-bound])").forEach(el => {
+                    el.setAttribute("data-bound", "1");
+                    el.addEventListener("click", () => highlightImage(el));
                 });
             }
 
-            async function selectImage(el) {
-                const imgData = JSON.parse(el.dataset.img);
-                const selectBtn = el.querySelector(".' . $prefix . '-ii-image__select");
+            function highlightImage(el) {
+                resultsContainer.querySelectorAll(".' . $prefix . '-ii-image--selected").forEach(o => o.classList.remove("' . $prefix . '-ii-image--selected"));
+                el.classList.add("' . $prefix . '-ii-image--selected");
+                iiSelected = el;
+                useBtn.disabled = false;
+            }
 
-                el.classList.add("' . $prefix . '-ii-image--loading");
-                selectBtn.textContent = "Downloading...";
+            async function commitImage(el) {
+                if (!el) return;
+                const imgData = JSON.parse(el.dataset.img);
+
+                useBtn.disabled = true;
+                useBtn.textContent = "Adding...";
 
                 try {
                     let imageUrl;
@@ -744,8 +861,8 @@ class InstantImages {
                     alert("Failed to download image. Please try again.");
                 }
 
-                el.classList.remove("' . $prefix . '-ii-image--loading");
-                selectBtn.textContent = "Select Image";
+                useBtn.disabled = false;
+                useBtn.textContent = "Use this photo";
             }
 
             // Event listeners
@@ -760,6 +877,13 @@ class InstantImages {
                     const query = searchInput.value.trim();
                     if (query) searchImages(query);
                 }
+            });
+
+            useBtn.addEventListener("click", () => commitImage(iiSelected));
+
+            loadMoreBtn.addEventListener("click", () => {
+                iiPage++;
+                searchImages(iiQuery, true);
             });
 
             // Expose open function globally
