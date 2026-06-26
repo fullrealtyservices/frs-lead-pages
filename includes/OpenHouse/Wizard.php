@@ -724,7 +724,7 @@ class Wizard {
         return '
         <style>
             .oh-wizard {
-                display: flex;
+                display: block;
                 min-height: 100dvh;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             }
@@ -769,15 +769,11 @@ class Wizard {
                 max-width: 400px;
             }
             .oh-wizard__form {
-                position: fixed;
-                left: 60%;
-                right: 0;
-                top: 0;
-                bottom: 0;
-                height: 100dvh;
-                overflow-y: auto;
+                margin-left: 60%;
+                width: 40%;
+                min-height: 100dvh;
                 background: #fff;
-                padding: 24px 32px;
+                padding: 24px 32px 96px;
                 box-sizing: border-box;
             }
             .oh-wizard__progress {
