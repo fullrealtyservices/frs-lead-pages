@@ -259,6 +259,17 @@ class Template {
         $page_phone = $page_id ? get_post_meta( $page_id, '_frs_lo_phone', true ) : '';
         $page_nmls  = $page_id ? get_post_meta( $page_id, '_frs_lo_nmls', true )  : '';
 
+        // An NMLS is a number. Some pages have a bio (or a city) saved in this
+        // field, so validate and use the first source that is actually an NMLS
+        // number — never render non-numeric junk as "NMLS# ...".
+        $nmls = '';
+        foreach ( [ $page_nmls, (string) \FRSLeadPages\frs_get_user_nmls( $lo_id ) ] as $candidate ) {
+            if ( preg_match( '/^\s*(\d{4,12})\s*$/', (string) $candidate, $m ) ) {
+                $nmls = $m[1];
+                break;
+            }
+        }
+
         return [
             'id'         => $lo_id,
             'name'       => $page_name ?: $lo_user->display_name,
@@ -266,7 +277,7 @@ class Template {
             'last_name'  => $lo_user->last_name,
             'email'      => $page_email ?: $lo_user->user_email,
             'phone'      => $page_phone ?: ( get_user_meta( $lo_id, 'phone', true ) ?: get_user_meta( $lo_id, 'phone_number', true ) ?: get_user_meta( $lo_id, 'mobile_phone', true ) ),
-            'nmls'       => $page_nmls ?: \FRSLeadPages\frs_get_user_nmls( $lo_id ),
+            'nmls'       => $nmls,
             'title'      => get_user_meta( $lo_id, 'job_title', true ) ?: 'Loan Officer',
             'company'    => '21st Century Lending',
             'photo'      => $photo,
