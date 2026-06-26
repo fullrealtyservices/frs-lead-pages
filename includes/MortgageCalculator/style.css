@@ -126,7 +126,10 @@
     left: 60%;
     right: 0;
     top: 0;
+    bottom: auto;
+    height: auto;
     min-height: 100dvh;
+    overflow: visible;
     background: var(--mc-white);
     padding: 48px 56px 120px;
     box-sizing: border-box;

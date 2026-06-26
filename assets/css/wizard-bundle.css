@@ -4,12 +4,17 @@
  * Imports all wizard modal styles to ensure modals are hidden by default.
  * This bundle is enqueued by Frontend/LeadPages/Dashboard.php
  *
+ * IMPORTANT: @import URLs carry a ?ver query that MUST be bumped to the
+ * current plugin version whenever any imported style.css changes. Browsers
+ * cache @import'd files by URL and ignore the parent bundle's ?ver, so
+ * without bumping this, edits to the per-wizard style.css ship stale.
+ *
  * @package FRSLeadPages
  */
 
-@import url('../../includes/OpenHouse/style.css');
-@import url('../../includes/CustomerSpotlight/style.css');
-@import url('../../includes/SpecialEvent/style.css');
-@import url('../../includes/MortgageCalculator/style.css');
-@import url('../../includes/RateQuote/style.css');
-@import url('../../includes/ApplyNow/style.css');
+@import url('../../includes/OpenHouse/style.css?ver=1.5.17');
+@import url('../../includes/CustomerSpotlight/style.css?ver=1.5.17');
+@import url('../../includes/SpecialEvent/style.css?ver=1.5.17');
+@import url('../../includes/MortgageCalculator/style.css?ver=1.5.17');
+@import url('../../includes/RateQuote/style.css?ver=1.5.17');
+@import url('../../includes/ApplyNow/style.css?ver=1.5.17');
