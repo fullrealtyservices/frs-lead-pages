@@ -408,6 +408,13 @@ class InstantImages {
             const iiModal = document.getElementById("' . $prefix . '-instant-images-modal");
             if (!iiModal) return;
 
+            // Move the modal to <body> so it overlays the page cleanly and is not
+            // clipped or trapped inside the wizard modal\'s stacking context (which
+            // otherwise hides it, breaks scrolling, and hides the selected image).
+            if (iiModal.parentElement !== document.body) {
+                document.body.appendChild(iiModal);
+            }
+
             const iiConfig = ' . wp_json_encode( $data ) . ';
             const searchInput = document.getElementById("' . $prefix . '-ii-search-input");
             const searchBtn = iiModal.querySelector(".' . $prefix . '-ii-search__btn");
@@ -609,7 +616,7 @@ class InstantImages {
 
                 resultsContainer.innerHTML = results.map(img => `
                     <div class="' . $prefix . '-ii-image" data-img=\'${JSON.stringify(img)}\'>
-                        <img src="${img.thumb}" alt="${img.alt}" loading="lazy">
+                        <img src="${img.thumb}" alt="${img.alt}" loading="eager" decoding="async" referrerpolicy="no-referrer">
                         <div class="' . $prefix . '-ii-image__overlay">
                             <button type="button" class="' . $prefix . '-ii-image__select">Select Image</button>
                         </div>
@@ -632,9 +639,11 @@ class InstantImages {
                 try {
                     let imageUrl;
 
-                    // For direct URLs (no API key), use the URL directly
-                    if (imgData.provider === "unsplash-direct") {
-                        imageUrl = imgData.download;
+                    // Use the image URL directly. The proxy returns hotlinkable
+                    // image URLs, so we skip the sideload (which was failing) and
+                    // set the chosen photo straight onto the page.
+                    if (imgData.full || imgData.download) {
+                        imageUrl = imgData.full || imgData.download;
 
                         // Update the hidden input and image grid directly
                         const targetInput = document.getElementById("' . $target_input_id . '");
