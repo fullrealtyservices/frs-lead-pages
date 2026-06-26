@@ -3,7 +3,7 @@
  * Plugin Name: FRS Lead Pages
  * Plugin URI: https://myhub21.com
  * Description: Lead generation landing page builder with multi-step wizard. Create Open House, Customer Spotlight, and Event pages with LO/Realtor co-branding.
- * Version: 1.5.10
+ * Version: 1.5.11
  * Author: Derin Tolu / FRS Brand Experience Teams
  * Author URI: https://myhub21.com
  * License: GPL-2.0-or-later
@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin constants
-define( 'FRS_LEAD_PAGES_VERSION', '1.5.10' );
+define( 'FRS_LEAD_PAGES_VERSION', '1.5.11' );
 define( 'FRS_LEAD_PAGES_PLUGIN_FILE', __FILE__ );
 define( 'FRS_LEAD_PAGES_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FRS_LEAD_PAGES_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -752,9 +752,9 @@ function frs_normalize_upload_url( string $url ): string {
         return $url;
     }
 
-    if ( is_multisite() ) {
-        $url = preg_replace( '#/uploads/sites/\d+/#', '/uploads/', $url );
-    }
+    // NOTE: Do NOT strip /uploads/sites/N/. On this multisite the files actually
+    // live under /uploads/sites/2/ (the stripped /uploads/ path 404s), so the URL
+    // WordPress generates is already correct — stripping it breaks headshots/logos.
 
     // Rewrite the host to the current serving site. Upload URLs are sometimes
     // stored with a stale host (e.g. a .local dev host carried over by a content
