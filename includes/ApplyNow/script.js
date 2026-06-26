@@ -225,68 +225,33 @@
     setupAnPartnerUpload('photo');
     setupAnPartnerUpload('logo');
 
-    // ===== LO Headshot: use profile photo or upload a new one =====
+    // ===== LO Headshot: show current photo, upload a different one =====
     (function setupLoHeadshot() {
+        var img          = document.getElementById('an-lo-photo-img');
+        var btn          = document.getElementById('an-lo-photo-btn');
         var hiddenUrl    = document.getElementById('an-lo-photo-url');
-        var uploadWrap   = document.getElementById('an-lo-photo-upload-wrap');
-        var uploadDiv    = document.getElementById('an-lo-photo-upload');
         var fileInput    = document.getElementById('an-lo-photo-file');
         var statusEl     = document.getElementById('an-lo-photo-status');
         var previewPhoto = document.getElementById('an-preview-photo');
-        if (!hiddenUrl || !fileInput) return;
-
-        var profilePhoto = hiddenUrl.dataset.profilePhoto || (userData.photo || '');
-        var radios = wizard.querySelectorAll('input[name="an-headshot-source"]');
-
-        radios.forEach(function(radio) {
-            radio.addEventListener('change', function() {
-                if (!radio.checked) return;
-                if (radio.value === 'upload') {
-                    uploadWrap.style.display = 'block';
-                } else {
-                    uploadWrap.style.display = 'none';
-                    hiddenUrl.value = '';
-                    fileInput.value = '';
-                    if (statusEl) statusEl.style.display = 'none';
-                    if (previewPhoto && profilePhoto) previewPhoto.src = profilePhoto;
-                }
-            });
-        });
-
-        if (uploadDiv) {
-            uploadDiv.addEventListener('click', function() { fileInput.click(); });
-            uploadDiv.addEventListener('dragover', function(e) { e.preventDefault(); uploadDiv.style.borderColor = '#6366f1'; });
-            uploadDiv.addEventListener('dragleave', function() { uploadDiv.style.borderColor = '#cbd5e1'; });
-            uploadDiv.addEventListener('drop', function(e) {
-                e.preventDefault();
-                uploadDiv.style.borderColor = '#cbd5e1';
-                if (e.dataTransfer.files.length) {
-                    fileInput.files = e.dataTransfer.files;
-                    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            });
-        }
-
+        if (!img || !fileInput) return;
+        if (btn) btn.addEventListener('click', function() { fileInput.click(); });
         fileInput.addEventListener('change', function(e) {
             var file = e.target.files[0];
             if (!file) return;
             if (!file.type.match(/image\/(jpeg|png|gif|webp)/)) { alert('Please upload an image (PNG, JPG, GIF, or WebP)'); return; }
             if (file.size > 5242880) { alert('File size must be less than 5MB'); return; }
-            if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = '#64748b'; statusEl.textContent = 'Uploading…'; }
-            // Instant local preview while the upload runs.
+            if (statusEl) { statusEl.style.color = '#64748b'; statusEl.textContent = 'Uploading…'; }
             var reader = new FileReader();
-            reader.onload = function(ev) { if (previewPhoto) previewPhoto.src = ev.target.result; };
+            reader.onload = function(ev) { img.src = ev.target.result; if (previewPhoto) previewPhoto.src = ev.target.result; };
             reader.readAsDataURL(file);
             uploadPhotoToMedia(file, function(url) {
                 hiddenUrl.value = url;
+                img.src = url;
                 if (previewPhoto) previewPhoto.src = url;
-                if (statusEl) { statusEl.style.color = '#16a34a'; statusEl.textContent = 'New headshot ready.'; }
+                if (statusEl) { statusEl.style.color = '#16a34a'; statusEl.textContent = '✓ New photo uploaded'; }
             }, function(msg) {
                 alert(msg || 'Upload failed. Please try again.');
-                hiddenUrl.value = '';
-                fileInput.value = '';
-                if (statusEl) statusEl.style.display = 'none';
-                if (previewPhoto && profilePhoto) previewPhoto.src = profilePhoto;
+                if (statusEl) { statusEl.style.color = '#64748b'; statusEl.textContent = 'Using your profile headshot'; }
             });
         });
     })();

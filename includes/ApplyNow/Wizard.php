@@ -497,30 +497,16 @@ class Wizard {
                         <?php if ( $is_loan_officer ) : ?>
                             <!-- LO Mode: Show LO fields -->
 
-                            <!-- Headshot: use profile photo or upload a new one -->
+                            <!-- Headshot: show their actual profile photo + option to upload a different one -->
                             <div class="an-field" style="margin-bottom:20px;">
                                 <label class="an-label">Your Headshot</label>
-                                <div class="an-headshot-choice" role="radiogroup" style="display:flex; gap:12px; flex-wrap:wrap;">
-                                    <label class="an-headshot-opt" style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:8px 14px; border:1px solid #cbd5e1; border-radius:8px;">
-                                        <input type="radio" name="an-headshot-source" value="profile" checked>
-                                        <span>Use my profile headshot</span>
-                                    </label>
-                                    <label class="an-headshot-opt" style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:8px 14px; border:1px solid #cbd5e1; border-radius:8px;">
-                                        <input type="radio" name="an-headshot-source" value="upload">
-                                        <span>Upload a new one</span>
-                                    </label>
-                                </div>
-                                <div id="an-lo-photo-upload-wrap" style="display:none; margin-top:12px;">
-                                    <div class="an-photo-upload" id="an-lo-photo-upload" style="border:2px dashed #cbd5e1; padding:20px; border-radius:8px; text-align:center; cursor:pointer;">
+                                <div style="display:flex; align-items:center; gap:16px;">
+                                    <img id="an-lo-photo-img" src="<?php echo esc_url( $user_data['photo'] ); ?>" alt="Your headshot" style="width:84px; height:84px; border-radius:50%; object-fit:cover; border:2px solid #e2e8f0; background:#f1f5f9; flex-shrink:0;">
+                                    <div>
+                                        <button type="button" id="an-lo-photo-btn" class="an-btn an-btn--secondary" style="padding:8px 16px;">Upload a different photo</button>
                                         <input type="file" id="an-lo-photo-file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
-                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin:0 auto 8px; opacity:0.5;">
-                                            <circle cx="12" cy="8" r="4"/>
-                                            <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
-                                        </svg>
-                                        <p style="margin:0; font-weight:500;">Click to upload or drag and drop</p>
-                                        <p style="margin:4px 0 0; font-size:12px; color:#94a3b8;">PNG, JPG, GIF or WebP (max 5MB)</p>
+                                        <p id="an-lo-photo-status" style="margin:8px 0 0; font-size:13px; color:#64748b;">Using your profile headshot</p>
                                     </div>
-                                    <p id="an-lo-photo-status" style="display:none; font-size:13px; margin-top:8px;"></p>
                                 </div>
                                 <input type="hidden" id="an-lo-photo-url" value="" data-profile-photo="<?php echo esc_attr( $user_data['photo'] ); ?>">
                             </div>
