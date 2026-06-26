@@ -18,3 +18,41 @@
 @import url('../../includes/MortgageCalculator/style.css?ver=1.5.17');
 @import url('../../includes/RateQuote/style.css?ver=1.5.17');
 @import url('../../includes/ApplyNow/style.css?ver=1.5.17');
+
+/* ============================================================
+   Full-screen wizard modals + 30% right panel.
+   The dashboard renders inside .entry-content.is-layout-constrained,
+   whose "> *" rule otherwise caps these modals to the theme content
+   width and centers them into a card. wizard-bundle.js relocates the
+   modals to <body>; these rules are the CSS backstop and set the split.
+   ============================================================ */
+#oh-wizard-modal, #cs-wizard-modal, #se-wizard-modal,
+#an-wizard-modal, #mc-wizard-modal, #rq-wizard-modal {
+    max-width: none !important;
+    width: 100vw !important;
+    margin: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+}
+#oh-wizard-modal .oh-modal__container, #cs-wizard-modal .cs-modal__container,
+#se-wizard-modal .se-modal__container, #an-wizard-modal .an-modal__container,
+#mc-wizard-modal .mc-modal__container, #rq-wizard-modal .rq-modal__container {
+    max-width: none !important;
+    width: 100vw !important;
+    flex: none !important;
+}
+
+/* Right panel pinned to 30% (hero 70%) on desktop only; the wizards'
+   own <=1024px media queries still stack the panels on mobile. */
+@media (min-width: 1025px) {
+    #oh-wizard-modal .oh-wizard__hero, #cs-wizard-modal .cs-wizard__hero,
+    #se-wizard-modal .se-wizard__hero, #an-wizard-modal .an-wizard__hero,
+    #mc-wizard-modal .mc-wizard__hero, #rq-wizard-modal .rq-wizard__hero {
+        width: 70% !important;
+    }
+    #oh-wizard-modal .oh-wizard__form, #cs-wizard-modal .cs-wizard__form,
+    #se-wizard-modal .se-wizard__form, #an-wizard-modal .an-wizard__form,
+    #mc-wizard-modal .mc-wizard__form, #rq-wizard-modal .rq-wizard__form {
+        left: 70% !important;
+    }
+}

@@ -86,4 +86,22 @@
             })
             .catch(function() { onError(); });
     };
+
+    // Move every wizard modal up to <body> so the dashboard's width-constrained
+    // content wrapper (.entry-content.is-layout-constrained) cannot cap it into a
+    // centered card — these modals must overlay the entire screen. Mirrors what
+    // the stock-photo modal already does to stay full-screen.
+    function frsMoveWizardModalsToBody() {
+        ['oh', 'cs', 'se', 'an', 'mc', 'rq'].forEach(function(p) {
+            var m = document.getElementById(p + '-wizard-modal');
+            if (m && m.parentElement !== document.body) {
+                document.body.appendChild(m);
+            }
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', frsMoveWizardModalsToBody);
+    } else {
+        frsMoveWizardModalsToBody();
+    }
 })();
