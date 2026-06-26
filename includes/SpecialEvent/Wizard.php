@@ -595,13 +595,13 @@ class Wizard {
     private static function render_styles(): string {
         return '
         <style>
-            .se-wizard { display: flex; min-height: 100dvh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+            .se-wizard { display: flex; position: relative; min-height: 100dvh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
             .se-wizard__hero { width: 60%; height: 100dvh; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); display: flex; flex-direction: column; justify-content: center; padding: 64px; position: fixed; left: 0; top: 0; overflow: hidden; }
             .se-wizard__hero::before { content: ""; position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; background: radial-gradient(circle, rgba(45,212,218,0.15) 0%, transparent 70%); pointer-events: none; }
             .se-wizard__hero-content { position: relative; z-index: 1; }
             .se-wizard__hero h1 { font-size: 48px; font-weight: 700; color: #fff; margin: 0 0 16px; line-height: 1.1; }
             .se-wizard__hero p { font-size: 18px; color: rgba(255,255,255,0.9); margin: 0; max-width: 400px; }
-            .se-wizard__form { position: fixed; left: 60%; right: 0; top: 0; bottom: 0; height: 100dvh; overflow-y: auto; background: #fff; padding: 48px 56px; box-sizing: border-box; }
+            .se-wizard__form { position: absolute; left: 60%; right: 0; top: 0; min-height: 100dvh; background: #fff; padding: 48px 56px 96px; box-sizing: border-box; }
             .se-wizard__progress { height: 3px; background: #e5e7eb; margin-bottom: 40px; }
             .se-wizard__progress-bar { height: 100%; background: #1e293b; transition: width 0.3s ease; }
             .se-wizard__header { margin-bottom: 8px; }

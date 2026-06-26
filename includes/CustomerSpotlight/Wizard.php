@@ -632,6 +632,7 @@ Smooth closing process"></textarea>
         <style>
             .cs-wizard {
                 display: flex;
+                position: relative;
                 min-height: 100dvh;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             }
@@ -676,15 +677,13 @@ Smooth closing process"></textarea>
                 max-width: 400px;
             }
             .cs-wizard__form {
-                position: fixed;
+                position: absolute;
                 left: 60%;
                 right: 0;
                 top: 0;
-                bottom: 0;
-                height: 100dvh;
-                overflow-y: auto;
+                min-height: 100dvh;
                 background: #fff;
-                padding: 48px 56px;
+                padding: 48px 56px 96px;
                 box-sizing: border-box;
             }
             .cs-wizard__progress {
