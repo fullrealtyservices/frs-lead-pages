@@ -300,6 +300,8 @@ class InstantImages {
                 overflow-y: auto;
                 display: grid;
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                grid-auto-rows: 160px;
+                align-content: start;
                 gap: 16px;
                 padding: 4px;
             }
@@ -339,7 +341,8 @@ class InstantImages {
                 color: #64748b;
             }
             .' . $prefix . '-ii-image {
-                aspect-ratio: 4/3;
+                height: 160px;
+                min-height: 0;
                 border-radius: 10px;
                 overflow: hidden;
                 cursor: pointer;
@@ -347,6 +350,7 @@ class InstantImages {
                 background: #f1f5f9;
             }
             .' . $prefix . '-ii-image img {
+                display: block;
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
