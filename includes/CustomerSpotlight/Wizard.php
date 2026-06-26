@@ -504,22 +504,16 @@ Smooth closing process"></textarea>
                                 </div>
                             </div>
 
-                            <!-- Photo Upload -->
+                            <!-- Headshot: show their actual profile photo + option to upload a different one -->
                             <div class="cs-field" style="margin-top: 24px;">
-                                <label class="cs-label">Your Photo (Optional)</label>
-                                <div class="cs-photo-upload" id="cs-lo-photo-upload" style="border: 2px dashed #cbd5e1; padding: 20px; border-radius: 8px; text-align: center; cursor: pointer;">
-                                    <input type="file" id="cs-lo-photo-file" accept="image/*" style="display: none;">
-                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 8px; opacity: 0.5;">
-                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                                        <polyline points="21 15 16 10 5 21"></polyline>
-                                    </svg>
-                                    <p style="margin: 0; font-weight: 500;">Click to upload or drag and drop</p>
-                                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #94a3b8;">PNG, JPG or GIF (max 5MB)</p>
-                                </div>
-                                <div id="cs-lo-photo-preview" style="margin-top: 12px; display: none;">
-                                    <img id="cs-lo-photo-preview-img" src="" alt="Preview" style="width: 100px; height: 100px; border-radius: 8px; object-fit: cover;">
-                                    <button type="button" id="cs-lo-photo-remove" class="cs-btn cs-btn--ghost cs-btn--sm" style="margin-left: 12px;">Remove</button>
+                                <label class="cs-label">Your Headshot</label>
+                                <div style="display:flex; align-items:center; gap:16px;">
+                                    <img id="cs-lo-photo-img" src="<?php echo esc_url( $user_data['photo'] ); ?>" alt="Your headshot" style="width:84px; height:84px; border-radius:50%; object-fit:cover; border:2px solid #e2e8f0; background:#f1f5f9; flex-shrink:0;">
+                                    <div>
+                                        <button type="button" id="cs-lo-photo-btn" class="cs-btn cs-btn--secondary" style="padding:8px 16px;">Upload a different photo</button>
+                                        <input type="file" id="cs-lo-photo-file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
+                                        <p id="cs-lo-photo-status" style="margin:8px 0 0; font-size:13px; color:#64748b;">Using your profile headshot</p>
+                                    </div>
                                 </div>
                                 <input type="hidden" id="cs-lo-photo-url" value="">
                             </div>
@@ -1924,9 +1918,38 @@ Smooth closing process"></textarea>
                 }
             }
 
-            setupPhotoUpload("lo");
             setupPhotoUpload("realtor");
             setupPhotoUpload("partner");
+
+            // LO headshot: show their current photo, let them upload a different one,
+            // and confirm visibly once the new photo is uploaded.
+            (function setupLoHeadshot() {
+                const img = document.getElementById("cs-lo-photo-img");
+                const btn = document.getElementById("cs-lo-photo-btn");
+                const fileInput = document.getElementById("cs-lo-photo-file");
+                const statusEl = document.getElementById("cs-lo-photo-status");
+                const urlInput = document.getElementById("cs-lo-photo-url");
+                if (!img || !fileInput) return;
+                if (btn) btn.addEventListener("click", () => fileInput.click());
+                fileInput.addEventListener("change", (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    if (!file.type.match(/image\/(jpeg|png|gif|webp)/)) { alert("Please upload an image (PNG, JPG, GIF, or WebP)"); return; }
+                    if (file.size > 5242880) { alert("File size must be less than 5MB"); return; }
+                    if (statusEl) { statusEl.style.color = "#64748b"; statusEl.textContent = "Uploading…"; }
+                    const reader = new FileReader();
+                    reader.onload = (ev) => { img.src = ev.target.result; };
+                    reader.readAsDataURL(file);
+                    window.frsLpUploadPhoto(file, (url) => {
+                        urlInput.value = url;
+                        img.src = url;
+                        if (statusEl) { statusEl.style.color = "#16a34a"; statusEl.textContent = "✓ New photo uploaded"; }
+                    }, (msg) => {
+                        alert(msg || "Upload failed. Please try again.");
+                        if (statusEl) { statusEl.style.color = "#64748b"; statusEl.textContent = "Using your profile headshot"; }
+                    });
+                });
+            })();
 
             // Partner company logo upload (separate from headshot)
             (function setupPartnerLogoUpload() {
